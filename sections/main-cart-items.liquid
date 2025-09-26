@@ -87,8 +87,22 @@
                     {% endif %}
                   >
                     <td class="cart-item__media">
-                      {% if item.image %}
-                        {% comment %} Leave empty space due to a:empty CSS display: none rule {% endcomment %}
+                      {%- if item.properties._is_free_sample == 'true' and item.properties._selected_product_image != blank -%}
+                        {% comment %} Use selected product image for samples {% endcomment %}
+                        <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+                        <div class="cart-item__image-container gradient global-media-settings">
+                          <img
+                            src="{{ item.properties._selected_product_image }}"
+                            class="cart-item__image"
+                            alt="{{ item.properties._selected_product_title | default: item.product.title | escape }}"
+                            loading="lazy"
+                            width="150"
+                            height="150"
+                            style="object-fit: cover;"
+                          >
+                        </div>
+                      {%- elsif item.image -%}
+                        {% comment %} Regular product image {% endcomment %}
                         <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
                         <div class="cart-item__image-container gradient {% if item.parent_relationship.parent == null %}global-media-settings{% endif %}">
                           <img
@@ -100,7 +114,7 @@
                             height="{{ 150 | divided_by: item.image.aspect_ratio | ceil }}"
                           >
                         </div>
-                      {% endif %}
+                      {%- endif -%}
                     </td>
 
                     <td class="cart-item__details">
@@ -108,7 +122,16 @@
                         <p class="caption-with-letter-spacing">{{ item.product.vendor }}</p>
                       {%- endif -%}
 
-                      <a href="{{ item.url }}" class="cart-item__name h4 break">{{ item.product.title | escape }}</a>
+                      <a href="{{ item.url }}" class="cart-item__name h4 break">
+                        {%- if item.properties._is_free_sample == 'true' and item.properties._selected_product_title -%}
+                          PRÓBKA: {{ item.properties._selected_product_title | escape }}
+                          {%- if item.properties._selected_variant_title and item.properties._selected_variant_title != 'Default' -%}
+                            - {{ item.properties._selected_variant_title | escape }}
+                          {%- endif -%}
+                        {%- else -%}
+                          {{ item.product.title | escape }}
+                        {%- endif -%}
+                      </a>
 
                       {%- if item.original_price != item.final_price -%}
                         <div class="cart-item__discounted-prices">
@@ -237,11 +260,14 @@
                             {%- endif -%}
                             <quantity-input class="quantity cart-quantity">
                               {% assign can_update_quantity = item.instructions.can_update_quantity | default: true %}
+                              {%- if item.properties._is_free_sample == 'true' -%}
+                                {% assign can_update_quantity = false %}
+                              {%- endif -%}
                               <button
                                 class="quantity__button"
                                 name="minus"
                                 type="button"
-                                {% if can_update_quantity == false %}
+                                {% if item.properties._is_free_sample == 'true' or can_update_quantity == false %}
                                   disabled
                                 {% endif %}
                               >
@@ -260,16 +286,25 @@
                                 value="{{ item.quantity }}"
                                 {% # theme-check-disable %}
                                 data-cart-quantity="{{ cart | item_count_for_variant: item.variant.id }}"
-                                min="0"
-                                data-min="{{ item.variant.quantity_rule.min }}"
-                                {% if item.variant.quantity_rule.max != null %}
-                                  max="{{ item.variant.quantity_rule.max }}"
+                                {% if item.properties._is_free_sample == 'true' %}
+                                  min="1"
+                                  max="1"
+                                  data-min="1"
+                                {% else %}
+                                  min="0"
+                                  data-min="{{ item.variant.quantity_rule.min }}"
+                                  {% if item.variant.quantity_rule.max != null %}
+                                    max="{{ item.variant.quantity_rule.max }}"
+                                  {% endif %}
                                 {% endif %}
                                 step="{{ item.variant.quantity_rule.increment }}"
                                 {% # theme-check-enable %}
                                 aria-label="{{ 'products.product.quantity.input_label' | t: product: item.product.title | escape }}"
                                 id="Quantity-{{ item.index | plus: 1 }}"
                                 data-index="{{ item.index | plus: 1 }}"
+                                {% if item.properties._is_free_sample == 'true' %}
+                                  readonly
+                                {% endif %}
                                 {% if can_update_quantity == false %}
                                   disabled
                                 {% endif %}
@@ -278,7 +313,7 @@
                                 class="quantity__button"
                                 name="plus"
                                 type="button"
-                                {% if can_update_quantity == false %}
+                                {% if item.properties._is_free_sample == 'true' or can_update_quantity == false %}
                                   disabled
                                 {% endif %}
                               >
