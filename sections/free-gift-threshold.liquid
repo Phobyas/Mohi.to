@@ -648,6 +648,8 @@
 {% schema %}
 {
   "name": "Gift Threshold Enhanced",
+  "tag": "section",
+  "class": "section",
   "settings": [
     {
       "type": "header",
@@ -802,7 +804,7 @@
       "min": 10,
       "max": 60,
       "step": 5,
-      "default": 32,
+      "default": 30,
       "unit": "px"
     },
     {
@@ -888,8 +890,17 @@
   ],
   "presets": [
     {
-      "name": "Gift Threshold Enhanced"
+      "name": "Gift Threshold Enhanced",
+      "settings": {
+        "threshold": 250,
+        "show_progress_bar": true,
+        "message_before": "Dodaj produkty za [amount] aby otrzymać darmową próbkę!",
+        "choose_title": "🎁 Gratulacje! Wybierz produkt do próbki",
+        "success_title": "Próbka została dodana!",
+        "success_message": "Twoja darmowa próbka zostanie dołączona do zamówienia."
+      }
     }
-  ]
+  ],
+  "templates": ["cart"]
 }
 {% endschema %}
