@@ -1,3 +1,12 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
 {
   "sections": {
     "cart-items": {
@@ -10,31 +19,66 @@
     },
     "cart-footer": {
       "type": "main-cart-footer",
-      "settings": {
-        "color_scheme": "scheme-1",
-        "padding_top": 20,
-        "padding_bottom": 40
-      },
       "blocks": {
         "subtotal": {
           "type": "subtotal",
-          "settings": {
-          }
+          "settings": {}
         },
         "buttons": {
           "type": "buttons",
-          "settings": {
-          }
+          "settings": {}
         }
       },
       "block_order": [
         "subtotal",
         "buttons"
-      ]
+      ],
+      "settings": {
+        "color_scheme": "scheme-1",
+        "padding_top": 20,
+        "padding_bottom": 40
+      }
+    },
+    "free_gift_threshold_nzXm9T": {
+      "type": "free-gift-threshold",
+      "name": "Gift Threshold Enhanced",
+      "settings": {
+        "sample_product": "premium-sample-1",
+        "threshold": 250,
+        "show_progress_bar": true,
+        "products_limit": 200,
+        "message_before": "Dodaj produkty za [amount] aby otrzymać darmową próbkę!",
+        "choose_title": "🎁 Gratulacje! Wybierz produkt do próbki",
+        "search_placeholder": "Szukaj produktu...",
+        "select_button_text": "Wybierz",
+        "add_button_text": "Dodaj próbkę do koszyka",
+        "success_title": "Próbka została dodana!",
+        "success_message": "Twoja darmowa próbka zostanie dołączona do zamówienia.",
+        "section_bg_color": "#ffffff",
+        "text_color": "#1f2937",
+        "accent_color": "#dc2626",
+        "progress_bg_color": "#e5e7eb",
+        "progress_fill_color": "#10b981",
+        "button_bg_color": "#1f2937",
+        "button_text_color": "#ffffff",
+        "button_hover_color": "#374151",
+        "card_border_color": "#e5e7eb",
+        "card_selected_color": "#10b981",
+        "section_padding": 30,
+        "section_radius": 12,
+        "progress_height": 12,
+        "message_font_size": 18,
+        "title_font_size": 28,
+        "text_align": "center",
+        "grid_columns": 5,
+        "product_image_height": 120,
+        "grid_max_height": 450
+      }
     }
   },
   "order": [
     "cart-items",
-    "cart-footer"
+    "cart-footer",
+    "free_gift_threshold_nzXm9T"
   ]
 }
