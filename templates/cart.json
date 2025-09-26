@@ -44,7 +44,7 @@
       "name": "Gift Threshold Enhanced",
       "settings": {
         "sample_product": "premium-sample-1",
-        "threshold": 250,
+        "threshold": 2600,
         "show_progress_bar": true,
         "products_limit": 200,
         "message_before": "Dodaj produkty za [amount] aby otrzymać darmową próbkę!",
