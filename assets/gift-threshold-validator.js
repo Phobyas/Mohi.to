@@ -317,7 +317,7 @@ if (document.readyState === "loading") {
   window.giftValidator = new GiftThresholdValidator();
 }
 
-// Re-initialize on Shopify section reload (theme editor)
+// Re-initialize on Shopify section reload (theme editora)
 document.addEventListener("shopify:section:load", () => {
   if (window.giftValidator) {
     window.giftValidator.destroy();
