@@ -1,5 +1,5 @@
 /**
- * Gift Threshold - Complete with Duplicate Prevention and Auto-Remove
+ * Gift Threshold - Using Shopify Product API
  * File: assets/gift-threshold.js
  */
 
@@ -13,34 +13,37 @@ class GiftThreshold {
 
     this.threshold = parseInt(this.section.dataset.threshold);
     this.cartTotal = parseInt(this.section.dataset.cartTotal);
+    this.sampleHandle = this.section.dataset.sampleHandle;
     this.universalSampleId = this.section.dataset.sampleId;
 
     console.log("Gift Threshold initialized:", {
       threshold: this.threshold,
       cartTotal: this.cartTotal,
+      sampleHandle: this.sampleHandle,
       sampleId: this.universalSampleId,
     });
 
-    // Validate configuration
-    if (
-      !this.universalSampleId ||
-      this.universalSampleId === "null" ||
-      this.universalSampleId === ""
-    ) {
-      console.error("Gift Threshold: No sample variant ID configured");
+    if (!this.sampleHandle) {
+      console.error("Gift Threshold: No sample product configured");
       return;
     }
 
     this.selectedProduct = null;
+    this.selectedSampleVariantId = null;
+    this.sampleProductData = null;
     this.isProcessing = false;
-    this.hasSample = undefined; // Track if cart has sample
-    this.isValidating = false; // Prevent multiple simultaneous validations
+    this.hasSample = undefined;
+    this.isValidating = false;
     this.init();
   }
 
-  init() {
+  async init() {
+    // Fetch sample product data at initialization
+    await this.fetchSampleProduct();
+
     this.initSearch();
     this.initProductSelection();
+    this.initSampleVariantSelection();
     this.initAddButton();
     this.startAmountUpdater();
     this.addEnhancedStyles();
@@ -50,8 +53,35 @@ class GiftThreshold {
     console.log("Gift Threshold: Initialization complete");
   }
 
+  async fetchSampleProduct() {
+    try {
+      const response = await fetch(
+        window.Shopify.routes.root + `products/${this.sampleHandle}.js`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch sample product: ${response.status}`);
+      }
+
+      this.sampleProductData = await response.json();
+      console.log("Sample product data fetched:", this.sampleProductData);
+
+      // Update universalSampleId if needed
+      if (
+        !this.universalSampleId &&
+        this.sampleProductData.variants.length > 0
+      ) {
+        this.universalSampleId = this.sampleProductData.variants[0].id;
+      }
+    } catch (error) {
+      console.error("Error fetching sample product:", error);
+      // Try to continue with the default sample ID if available
+      if (this.universalSampleId) {
+        console.log("Using default sample ID:", this.universalSampleId);
+      }
+    }
+  }
+
   async checkInitialState() {
-    // Check cart state on page load
     try {
       const response = await fetch("/cart.js");
       const cart = await response.json();
@@ -69,7 +99,6 @@ class GiftThreshold {
         threshold: this.threshold,
       });
 
-      // Immediately validate threshold on page load
       await this.validateThreshold();
     } catch (error) {
       console.error("Error checking initial state:", error);
@@ -107,7 +136,7 @@ class GiftThreshold {
     if (!grid) return;
 
     const visibleProducts = grid.querySelectorAll(
-      '.gift-threshold__product-card[style=""], .gift-threshold__product-card:not([style])'
+      '.gift-threshold__product-card[style=""], .gift-threshold__product-card:not([style*="display"])'
     );
 
     let noResultsMsg = grid.querySelector(".no-results-message");
@@ -135,6 +164,7 @@ class GiftThreshold {
     const productsGrid = document.getElementById("products-list");
     if (!productsGrid) return;
 
+    // Handle button clicks for single variant products
     productsGrid.addEventListener("click", (e) => {
       if (e.target.classList.contains("gift-threshold__choose-btn")) {
         e.preventDefault();
@@ -142,6 +172,7 @@ class GiftThreshold {
       }
     });
 
+    // Handle variant selection for multi-variant products
     productsGrid.addEventListener("change", (e) => {
       if (e.target.classList.contains("gift-threshold__variant-select")) {
         this.handleVariantSelect(e.target);
@@ -149,56 +180,72 @@ class GiftThreshold {
     });
   }
 
+  initSampleVariantSelection() {
+    const sampleVariantSelect = document.getElementById(
+      "sample-variant-select"
+    );
+    if (!sampleVariantSelect) return;
+
+    sampleVariantSelect.addEventListener("change", (e) => {
+      this.selectedSampleVariantId = e.target.value;
+      const addButton = document.getElementById("add-sample-btn");
+
+      if (this.selectedSampleVariantId && addButton) {
+        addButton.disabled = false;
+        addButton.style.animation = "pulse 0.5s ease";
+      } else if (addButton) {
+        addButton.disabled = true;
+      }
+    });
+  }
+
   handleProductSelect(button) {
     if (this.isProcessing) return;
 
-    const originalText = button.textContent;
-    button.textContent = "Wybieranie...";
-    button.disabled = true;
+    const card = button.closest(".gift-threshold__product-card");
+    const productImage = card.querySelector(".gift-threshold__product-image");
 
-    setTimeout(() => {
-      const card = button.closest(".gift-threshold__product-card");
-      const productImage = card.querySelector(".gift-threshold__product-image");
+    let imageUrl = "";
+    let imageAlt = "";
 
-      // Extract image information
-      let imageUrl = "";
-      let imageAlt = "";
-
-      if (productImage) {
-        if (productImage.tagName === "IMG") {
-          imageUrl = productImage.src;
-          imageAlt = productImage.alt || "";
-        } else {
-          const bgImage = window.getComputedStyle(productImage).backgroundImage;
-          if (bgImage && bgImage !== "none") {
-            imageUrl = bgImage.slice(5, -2);
-          }
-        }
+    if (productImage) {
+      if (productImage.tagName === "IMG") {
+        imageUrl = productImage.src;
+        imageAlt = productImage.alt || "";
       }
+    }
 
-      this.selectedProduct = {
-        title: button.dataset.product,
-        variantId: button.dataset.variantId,
-        variantTitle: button.dataset.variantTitle || "Default",
-        handle: card.dataset.productHandle || "",
-        imageUrl: imageUrl,
-        imageAlt: imageAlt || button.dataset.product,
-      };
+    this.selectedProduct = {
+      title: button.dataset.product,
+      variantId: button.dataset.variantId,
+      variantTitle: button.dataset.variantTitle || "Default",
+      handle: card.dataset.productHandle || "",
+      imageUrl: imageUrl,
+      imageAlt: imageAlt || button.dataset.product,
+    };
 
-      console.log("Selected product with image:", this.selectedProduct);
-
-      this.updateSelectedProductDisplay();
-      this.updateCardSelection(card);
-
-      button.textContent = originalText;
-      button.disabled = false;
-
-      this.scrollToSelected();
-    }, 300);
+    console.log("Product selected:", this.selectedProduct);
+    this.updateSelectedProductDisplay();
+    this.updateCardSelection(card);
+    this.loadSampleVariants();
+    this.scrollToSelected();
   }
 
   handleVariantSelect(select) {
-    if (this.isProcessing || !select.value) return;
+    if (this.isProcessing) return;
+
+    // If placeholder selected, clear selection
+    if (!select.value) {
+      const card = select.closest(".gift-threshold__product-card");
+      card.classList.remove("selected");
+      const selectedDiv = document.getElementById("selected-product");
+      if (selectedDiv) {
+        selectedDiv.style.display = "none";
+      }
+      this.selectedProduct = null;
+      this.selectedSampleVariantId = null;
+      return;
+    }
 
     const card = select.closest(".gift-threshold__product-card");
     const option = select.options[select.selectedIndex];
@@ -211,11 +258,6 @@ class GiftThreshold {
       if (productImage.tagName === "IMG") {
         imageUrl = productImage.src;
         imageAlt = productImage.alt || "";
-      } else {
-        const bgImage = window.getComputedStyle(productImage).backgroundImage;
-        if (bgImage && bgImage !== "none") {
-          imageUrl = bgImage.slice(5, -2);
-        }
       }
     }
 
@@ -228,26 +270,138 @@ class GiftThreshold {
       imageAlt: imageAlt || card.dataset.productTitle,
     };
 
+    console.log("Variant selected:", this.selectedProduct);
     this.updateSelectedProductDisplay();
     this.updateCardSelection(card);
+    this.loadSampleVariants();
     this.scrollToSelected();
   }
 
   updateSelectedProductDisplay() {
     const selectedDiv = document.getElementById("selected-product");
-    const selectedName = document.getElementById("selected-name");
-    const addButton = document.getElementById("add-sample-btn");
+    const selectedInfo = document.getElementById("selected-info");
 
-    if (!selectedDiv || !selectedName || !this.selectedProduct) return;
+    if (!selectedDiv || !this.selectedProduct) return;
 
-    selectedName.textContent = `${this.selectedProduct.title} - ${this.selectedProduct.variantTitle}`;
+    // Create product info display
+    if (selectedInfo) {
+      selectedInfo.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 15px;">
+          ${
+            this.selectedProduct.imageUrl
+              ? `
+            <img src="${this.selectedProduct.imageUrl}" 
+                 alt="${this.selectedProduct.imageAlt}"
+                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #10b981;">
+          `
+              : ""
+          }
+          <div>
+            <strong style="color: #065f46; font-size: 16px;">${
+              this.selectedProduct.title
+            }</strong>
+            ${
+              this.selectedProduct.variantTitle !== "Default"
+                ? `
+              <div style="color: #6b7280; font-size: 14px; margin-top: 4px;">
+                Wariant: ${this.selectedProduct.variantTitle}
+              </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      `;
+    }
 
+    // Show the selected product section
     selectedDiv.style.display = "block";
     selectedDiv.style.animation = "slideUp 0.5s ease";
+  }
 
-    if (addButton) {
-      addButton.disabled = false;
-      addButton.style.animation = "pulse 0.5s ease";
+  async loadSampleVariants() {
+    const sampleVariantSection = document.getElementById(
+      "sample-variant-section"
+    );
+    const sampleVariantSelect = document.getElementById(
+      "sample-variant-select"
+    );
+    const addButton = document.getElementById("add-sample-btn");
+
+    // If we don't have sample product data yet, try to fetch it
+    if (!this.sampleProductData && this.sampleHandle) {
+      await this.fetchSampleProduct();
+    }
+
+    if (!this.sampleProductData || !this.sampleProductData.variants) {
+      // No sample data, just enable the add button with default ID
+      if (addButton) {
+        addButton.disabled = !this.universalSampleId;
+      }
+      this.selectedSampleVariantId = this.universalSampleId;
+
+      if (sampleVariantSection) {
+        sampleVariantSection.style.display = "none";
+      }
+      return;
+    }
+
+    if (!sampleVariantSection || !sampleVariantSelect) {
+      // Elements not found but we have data, use first available variant
+      const availableVariant = this.sampleProductData.variants.find(
+        (v) => v.available
+      );
+      this.selectedSampleVariantId = availableVariant
+        ? availableVariant.id
+        : this.universalSampleId;
+      if (addButton) {
+        addButton.disabled = !this.selectedSampleVariantId;
+      }
+      return;
+    }
+
+    // Show the sample variant section
+    sampleVariantSection.style.display = "block";
+    sampleVariantSelect.disabled = false;
+
+    // Clear and populate the select
+    sampleVariantSelect.innerHTML =
+      '<option value="">Wybierz rozmiar próbki...</option>';
+
+    // Add available variants from sample product data
+    let availableVariants = [];
+    this.sampleProductData.variants.forEach((variant) => {
+      if (variant.available) {
+        const option = document.createElement("option");
+        option.value = variant.id;
+        option.textContent = variant.title || `Wariant ${variant.id}`;
+        sampleVariantSelect.appendChild(option);
+        availableVariants.push(variant);
+      }
+    });
+
+    console.log(`Loaded ${availableVariants.length} available sample variants`);
+
+    if (availableVariants.length === 0) {
+      // No available variants
+      sampleVariantSection.style.display = "none";
+      this.selectedSampleVariantId = null;
+      if (addButton) {
+        addButton.disabled = true;
+      }
+      this.showNotification("Brak dostępnych rozmiarów próbek", "warning");
+    } else if (availableVariants.length === 1) {
+      // Auto-select if only one variant
+      sampleVariantSelect.value = availableVariants[0].id;
+      this.selectedSampleVariantId = availableVariants[0].id;
+      if (addButton) {
+        addButton.disabled = false;
+      }
+    } else {
+      // Multiple variants - require selection
+      if (addButton) {
+        addButton.disabled = true;
+      }
     }
   }
 
@@ -257,7 +411,13 @@ class GiftThreshold {
       .forEach((card) => {
         if (card !== selectedCard) {
           card.classList.remove("selected");
-          card.style.transform = "";
+          // Reset variant select if exists
+          const variantSelect = card.querySelector(
+            ".gift-threshold__variant-select"
+          );
+          if (variantSelect) {
+            variantSelect.value = "";
+          }
         }
       });
 
@@ -331,11 +491,11 @@ class GiftThreshold {
       return;
     }
 
-    if (!this.universalSampleId) {
-      this.showNotification(
-        "Błąd konfiguracji - brak produktu próbki",
-        "error"
-      );
+    const variantIdToAdd =
+      this.selectedSampleVariantId || this.universalSampleId;
+
+    if (!variantIdToAdd) {
+      this.showNotification("Proszę wybrać rozmiar próbki", "error");
       return;
     }
 
@@ -348,22 +508,16 @@ class GiftThreshold {
       if (addButton) {
         addButton.disabled = true;
         addButton.innerHTML =
-          '<span class="gift-threshold__loading">Sprawdzanie...</span>';
-      }
-
-      // Remove any existing sample first
-      await this.checkAndRemoveExistingSample();
-
-      if (addButton) {
-        addButton.innerHTML =
           '<span class="gift-threshold__loading">Dodawanie...</span>';
       }
 
+      await this.checkAndRemoveExistingSample();
+
       const formData = new FormData();
-      formData.append("id", this.universalSampleId);
+      formData.append("id", variantIdToAdd);
       formData.append("quantity", "1");
 
-      // Add properties with image information
+      // Add all the properties
       formData.append("properties[_is_free_sample]", "true");
       formData.append(
         "properties[_selected_product_title]",
@@ -377,66 +531,65 @@ class GiftThreshold {
         "properties[_selected_product_handle]",
         this.selectedProduct.handle
       );
-      formData.append(
-        "properties[_selected_product_image]",
-        this.selectedProduct.imageUrl
-      );
-      formData.append(
-        "properties[_selected_product_image_alt]",
-        this.selectedProduct.imageAlt
-      );
-      formData.append(
-        "properties[Wybrany produkt]",
-        `${this.selectedProduct.title} - ${this.selectedProduct.variantTitle}`
-      );
 
-      console.log("Adding to cart with image data");
+      if (this.selectedProduct.imageUrl) {
+        formData.append(
+          "properties[_selected_product_image]",
+          this.selectedProduct.imageUrl
+        );
+        formData.append(
+          "properties[_selected_product_image_alt]",
+          this.selectedProduct.imageAlt
+        );
+      }
+
+      // Create display text
+      let displayText = `${this.selectedProduct.title}`;
+      if (this.selectedProduct.variantTitle !== "Default") {
+        displayText += ` - ${this.selectedProduct.variantTitle}`;
+      }
+
+      // Add sample variant info if we have it
+      if (this.sampleProductData && this.selectedSampleVariantId) {
+        const sampleVariant = this.sampleProductData.variants.find(
+          (v) => v.id == this.selectedSampleVariantId
+        );
+        if (sampleVariant && sampleVariant.title) {
+          displayText += ` (Próbka: ${sampleVariant.title})`;
+        }
+      }
+
+      formData.append("properties[Wybrany produkt]", displayText);
+
+      console.log("Adding to cart with variant ID:", variantIdToAdd);
 
       const response = await fetch("/cart/add.js", {
         method: "POST",
         body: formData,
       });
 
-      console.log("Cart add response status:", response.status);
-
       if (!response.ok) {
         let errorMessage = "Nie udało się dodać próbki do koszyka";
-
         try {
           const errorData = await response.json();
-          console.error("Cart add error response:", errorData);
+          console.error("Cart add error:", errorData);
 
-          if (response.status === 422) {
-            if (errorData.description) {
-              if (
-                errorData.description.includes("sold out") ||
-                errorData.description.includes("already sold out")
-              ) {
-                errorMessage =
-                  "Produkt próbki jest niedostępny. Sprawdź ustawienia w panelu admina.";
-              } else if (
-                errorData.description.includes("Cannot find variant")
-              ) {
-                errorMessage =
-                  "Produkt próbki nie został znaleziony. Sprawdź konfigurację sekcji.";
-              } else if (errorData.description.includes("can't add more")) {
-                errorMessage = "Osiągnięto maksymalną liczbę próbek";
-              } else {
-                errorMessage = `Błąd: ${errorData.description}`;
-              }
+          if (errorData.description) {
+            if (errorData.description.includes("sold out")) {
+              errorMessage =
+                "Wybrany rozmiar próbki jest niedostępny. Wybierz inny rozmiar.";
+            } else {
+              errorMessage = errorData.description;
             }
-          } else if (response.status === 404) {
-            errorMessage = "Produkt próbki nie istnieje w sklepie";
           }
-        } catch (parseError) {
-          console.error("Error parsing error response:", parseError);
+        } catch (e) {
+          console.error("Error parsing error response:", e);
         }
-
         throw new Error(errorMessage);
       }
 
       const result = await response.json();
-      console.log("Sample successfully added to cart:", result);
+      console.log("Sample added successfully:", result);
 
       this.showNotification("Próbka została dodana do koszyka!", "success");
 
@@ -447,11 +600,10 @@ class GiftThreshold {
       }
 
       setTimeout(() => {
-        console.log("Reloading page to update UI");
         window.location.reload();
       }, 1500);
     } catch (error) {
-      console.error("Error adding sample to cart:", error);
+      console.error("Error adding sample:", error);
       this.showNotification(error.message, "error");
 
       if (addButton) {
@@ -467,14 +619,11 @@ class GiftThreshold {
   showNotification(message, type = "info") {
     const existing = document.querySelector(".gift-notification");
     if (existing) {
-      existing.style.opacity = "0";
-      existing.style.transform = "translateX(100%)";
-      setTimeout(() => existing.remove(), 300);
+      existing.remove();
     }
 
     const notification = document.createElement("div");
     notification.className = `gift-notification gift-notification--${type}`;
-    notification.textContent = message;
 
     const icons = {
       success: "✔",
@@ -483,71 +632,38 @@ class GiftThreshold {
       info: "ℹ",
     };
 
-    if (icons[type]) {
-      notification.innerHTML = `<span style="margin-right: 8px;">${icons[type]}</span>${message}`;
-    }
-
+    notification.innerHTML = `<span style="margin-right: 8px;">${
+      icons[type] || ""
+    }</span>${message}`;
     document.body.appendChild(notification);
 
     setTimeout(() => {
-      if (notification.parentNode) {
-        notification.style.opacity = "0";
-        notification.style.transform = "translateX(100%)";
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-          }
-        }, 300);
-      }
+      notification.style.opacity = "0";
+      notification.style.transform = "translateX(100%)";
+      setTimeout(() => notification.remove(), 300);
     }, 5000);
 
     notification.addEventListener("click", () => {
-      notification.style.opacity = "0";
-      notification.style.transform = "translateX(100%)";
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      }, 300);
+      notification.remove();
     });
   }
 
   listenForCartUpdates() {
-    // Listen for remove button clicks specifically
     document.addEventListener("click", async (e) => {
       const removeButton = e.target.closest(
         'cart-remove-button, .cart-item__remove-button, [href*="cart/change"][href*="quantity=0"]'
       );
       if (removeButton) {
-        console.log("Remove button clicked, validating immediately");
-        // Immediate validation after a short delay
-        setTimeout(() => {
-          this.validateThreshold();
-        }, 800);
+        setTimeout(() => this.validateThreshold(), 800);
       }
     });
 
-    // Listen for quantity changes
     document.addEventListener("change", async (e) => {
       if (e.target.matches('input[name="updates[]"], .quantity__input')) {
-        console.log("Quantity changed, validating immediately");
-        setTimeout(() => {
-          this.validateThreshold();
-        }, 800);
+        setTimeout(() => this.validateThreshold(), 800);
       }
     });
 
-    // Listen for form submissions
-    document.addEventListener("submit", (e) => {
-      if (e.target.matches('form[action*="/cart"]')) {
-        console.log("Cart form submitted, will validate");
-        setTimeout(() => {
-          this.validateThreshold();
-        }, 1000);
-      }
-    });
-
-    // Monitor for fetch requests to cart endpoints
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const response = await originalFetch.apply(window, args);
@@ -555,43 +671,17 @@ class GiftThreshold {
 
       if (
         url &&
-        (url.includes("/cart/change") ||
-          url.includes("/cart/update") ||
-          url.includes("/cart/add"))
+        (url.includes("/cart/change") || url.includes("/cart/update"))
       ) {
-        console.log("Cart API call detected, validating threshold");
-        // Give the cart time to update
-        setTimeout(() => {
-          this.validateThreshold();
-        }, 500);
+        setTimeout(() => this.validateThreshold(), 500);
       }
 
       return response;
     };
-
-    // Listen for Shopify cart events
-    document.addEventListener("cart:updated", () => {
-      console.log("cart:updated event detected");
-      this.validateThreshold();
-    });
-
-    document.addEventListener("ajaxCart:updated", () => {
-      console.log("ajaxCart:updated event detected");
-      this.validateThreshold();
-    });
-  }
-
-  async revalidateThreshold() {
-    // This is now a wrapper for validateThreshold
-    await this.validateThreshold();
   }
 
   async validateThreshold() {
-    // Prevent multiple simultaneous validations
-    if (this.isValidating) {
-      console.log("Validation already in progress, skipping");
-      return;
-    }
+    if (this.isValidating) return;
 
     try {
       this.isValidating = true;
@@ -604,14 +694,6 @@ class GiftThreshold {
         (item) => item.properties && item.properties._is_free_sample === "true"
       );
 
-      console.log("Validating threshold:", {
-        currentThresholdReached,
-        currentHasSample,
-        cartTotal: cart.total_price,
-        threshold: this.threshold,
-      });
-
-      // CRITICAL: If cart is below threshold but sample exists, remove it immediately
       if (!currentThresholdReached && currentHasSample) {
         const sample = cart.items.find(
           (item) =>
@@ -619,9 +701,7 @@ class GiftThreshold {
         );
 
         if (sample) {
-          console.log("Cart below threshold, removing sample immediately");
-
-          const removeResponse = await fetch("/cart/change.js", {
+          await fetch("/cart/change.js", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -630,50 +710,14 @@ class GiftThreshold {
             }),
           });
 
-          if (removeResponse.ok) {
-            this.showNotification(
-              "Próbka została usunięta (koszyk poniżej progu)",
-              "warning"
-            );
-
-            // Force immediate page reload
-            setTimeout(() => {
-              location.reload(true);
-            }, 500);
-            return;
-          }
+          this.showNotification(
+            "Próbka została usunięta (koszyk poniżej progu)",
+            "warning"
+          );
+          setTimeout(() => location.reload(true), 500);
         }
       }
 
-      // Check if sample was manually removed while threshold still met
-      const sampleWasRemoved =
-        this.hasSample === true && currentHasSample === false;
-
-      if (sampleWasRemoved && currentThresholdReached) {
-        console.log("Sample was manually removed, reloading to show selector");
-        this.showNotification("Możesz wybrać nową próbkę", "info");
-
-        setTimeout(() => {
-          location.reload(true);
-        }, 500);
-        return;
-      }
-
-      // Check if threshold was just reached
-      if (
-        currentThresholdReached &&
-        !currentHasSample &&
-        !this.section.querySelector(".gift-threshold__selector")
-      ) {
-        console.log("Threshold reached, reloading to show selector");
-
-        setTimeout(() => {
-          location.reload(true);
-        }, 500);
-        return;
-      }
-
-      // Update state
       this.cartTotal = cart.total_price;
       this.hasSample = currentHasSample;
     } catch (error) {
@@ -685,32 +729,22 @@ class GiftThreshold {
 
   async startAmountUpdater() {
     await this.updateAmount();
-    // Update amount display every 2 seconds
-    setInterval(() => {
-      this.updateAmount();
-    }, 2000);
+    setInterval(() => this.updateAmount(), 2000);
   }
 
   async updateAmount() {
     try {
       const response = await fetch("/cart.js");
-      if (!response.ok) {
-        throw new Error("Failed to fetch cart data");
-      }
-
       const cart = await response.json();
 
-      // Always validate threshold when updating amount
       const currentThresholdReached = cart.total_price >= this.threshold;
       const currentHasSample = cart.items.some(
         (item) => item.properties && item.properties._is_free_sample === "true"
       );
 
-      // If conditions don't match, trigger validation immediately
       if (!currentThresholdReached && currentHasSample) {
-        console.log("Detected threshold violation during amount update");
         this.validateThreshold();
-        return; // Stop updating UI as page will reload
+        return;
       }
 
       const remaining = this.threshold - cart.total_price;
@@ -718,116 +752,23 @@ class GiftThreshold {
       const progressBar = this.section.querySelector(
         ".gift-threshold__progress-bar"
       );
-      const progressContainer = this.section.querySelector(
-        ".gift-threshold__progress"
-      );
-      const messageEl = this.section.querySelector(".gift-threshold__message");
 
-      // Update remaining amount
       if (amountEl && remaining > 0) {
         const formattedAmount = (remaining / 100).toFixed(2).replace(".", ",");
-        const newText = `${formattedAmount} zł`;
-
-        if (amountEl.textContent !== newText) {
-          amountEl.style.transform = "scale(1.1)";
-          amountEl.textContent = newText;
-          setTimeout(() => {
-            amountEl.style.transform = "scale(1)";
-          }, 200);
-        }
+        amountEl.textContent = `${formattedAmount} zł`;
       }
 
-      // Update progress bar
       if (progressBar) {
         const progress = Math.min(
           (cart.total_price / this.threshold) * 100,
           100
         );
         progressBar.style.width = `${progress}%`;
-
-        // Keep consistent green gradient for filled portion
-        progressBar.style.background =
-          "linear-gradient(90deg, #22c55e, #16a34a)";
-      }
-
-      // Set orange background for progress container if not already set
-      if (progressContainer && !progressContainer.style.background) {
-        progressContainer.style.background = "#fb923c"; // Orange background for unfilled portion
-      }
-
-      // Update or create progress info element
-      let progressInfoEl = this.section.querySelector(
-        ".gift-threshold__progress-info"
-      );
-
-      if (!progressInfoEl && progressContainer) {
-        progressInfoEl = document.createElement("div");
-        progressInfoEl.className = "gift-threshold__progress-info";
-        progressInfoEl.style.cssText = `
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: 8px;
-          font-size: 14px;
-          color: #6b7280;
-        `;
-        progressContainer.insertAdjacentElement("afterend", progressInfoEl);
-      }
-
-      const progressPercent = Math.min(
-        Math.round((cart.total_price / this.threshold) * 100),
-        100
-      );
-
-      if (progressInfoEl) {
-        if (progressPercent >= 100) {
-          progressInfoEl.innerHTML = `
-            <span style="color: #10b981; font-weight: 600;">🎉 Próg osiągnięty! 100%</span>
-            <span style="color: #10b981; font-weight: 600;">Możesz wybrać próbkę!</span>
-          `;
-        } else {
-          const remainingFormatted = (remaining / 100)
-            .toFixed(2)
-            .replace(".", ",");
-          progressInfoEl.innerHTML = `
-            <span>${progressPercent}% do darmowej próbki</span>
-            <span style="font-weight: 600;">Brakuje: ${remainingFormatted} zł</span>
-          `;
-        }
-      }
-
-      // Update message based on progress
-      if (messageEl && remaining > 0) {
-        if (remaining <= 2000) {
-          // Less than 20 PLN
-          messageEl.innerHTML = `Już prawie! Dodaj produkty za <span class="gift-threshold__amount">${(
-            remaining / 100
-          )
-            .toFixed(2)
-            .replace(".", ",")} zł</span> aby otrzymać darmową próbkę! 🎁`;
-        } else if (remaining <= 5000) {
-          // Less than 50 PLN
-          messageEl.innerHTML = `Blisko! Dodaj produkty za <span class="gift-threshold__amount">${(
-            remaining / 100
-          )
-            .toFixed(2)
-            .replace(".", ",")} zł</span> aby otrzymać darmową próbkę!`;
-        }
-      }
-
-      const wasReached = this.cartTotal >= this.threshold;
-      const isReached = cart.total_price >= this.threshold;
-
-      if (wasReached !== isReached) {
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-        return;
       }
 
       this.cartTotal = cart.total_price;
     } catch (error) {
-      console.error("Error updating cart amount:", error);
+      console.error("Error updating amount:", error);
     }
   }
 
@@ -852,66 +793,6 @@ class GiftThreshold {
           to { opacity: 1; transform: translateY(0); }
         }
         
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        
-        .gift-threshold__amount {
-          transition: transform 0.2s ease;
-        }
-        
-        .gift-threshold__progress {
-          position: relative;
-          overflow: hidden;
-        }
-        
-        .gift-threshold__progress-bar {
-          transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease;
-          position: relative;
-          overflow: hidden;
-        }
-        
-        .gift-threshold__progress-bar::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.3),
-            transparent
-          );
-          animation: shimmer 2s infinite;
-        }
-        
-        .no-results-message {
-          animation: fadeIn 0.3s ease;
-        }
-        
-        .gift-threshold__button {
-          transition: all 0.3s ease;
-        }
-        
-        .gift-threshold__loading::after {
-          content: "";
-          width: 16px;
-          height: 16px;
-          margin-left: 8px;
-          border: 2px solid transparent;
-          border-top: 2px solid currentColor;
-          border-radius: 50%;
-          display: inline-block;
-          animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        
         .gift-notification {
           position: fixed;
           top: 20px;
@@ -928,41 +809,30 @@ class GiftThreshold {
           transition: all 0.3s ease;
         }
         
-        .gift-notification--success {
-          background: #10b981;
-        }
-        
-        .gift-notification--error {
-          background: #dc2626;
-        }
-        
-        .gift-notification--warning {
-          background: #f59e0b;
-        }
-        
-        .gift-notification--info {
-          background: #3b82f6;
-        }
-        
-        .gift-notification:hover {
-          transform: translateX(-5px);
-          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-        }
+        .gift-notification--success { background: #10b981; }
+        .gift-notification--error { background: #dc2626; }
+        .gift-notification--warning { background: #f59e0b; }
+        .gift-notification--info { background: #3b82f6; }
         
         @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         }
         
-        .gift-threshold__progress-info {
-          font-weight: 600;
-          transition: color 0.3s ease;
+        .gift-threshold__loading::after {
+          content: "";
+          width: 16px;
+          height: 16px;
+          margin-left: 8px;
+          border: 2px solid transparent;
+          border-top: 2px solid currentColor;
+          border-radius: 50%;
+          display: inline-block;
+          animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `;
       document.head.appendChild(style);
