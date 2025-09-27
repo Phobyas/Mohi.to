@@ -39,46 +39,41 @@
         "padding_bottom": 40
       }
     },
-    "free_gift_threshold_nzXm9T": {
+    "free_gift_threshold_eFJfPy": {
       "type": "free-gift-threshold",
-      "name": "Gift Threshold Enhanced",
+      "blocks": {
+        "gift_product_GRCRYp": {
+          "type": "gift_product",
+          "settings": {
+            "product": ""
+          }
+        }
+      },
+      "block_order": [
+        "gift_product_GRCRYp"
+      ],
+      "name": "Darmowy Prezent - Próg",
       "settings": {
-        "sample_product": "premium-sample-1",
-        "threshold": 2600,
+        "threshold": 250,
+        "title": "Darmowy prezent",
+        "progress_message": "Dodaj produkty za [amount] aby otrzymać darmowy prezent!",
+        "threshold_message": "🎉 Gratulacje! Wybierz swój darmowy prezent:",
+        "success_message": "Prezent został dodany do koszyka!",
+        "add_button_text": "Dodaj darmowy prezent",
         "show_progress_bar": true,
-        "products_limit": 200,
-        "message_before": "Dodaj produkty za [amount] aby otrzymać darmową próbkę!",
-        "choose_title": "🎁 Gratulacje! Wybierz produkt do próbki",
-        "search_placeholder": "Szukaj produktu...",
-        "select_button_text": "Wybierz",
-        "add_button_text": "Dodaj próbkę do koszyka",
-        "success_title": "Próbka została dodana!",
-        "success_message": "Twoja darmowa próbka zostanie dołączona do zamówienia.",
-        "section_bg_color": "#ffffff",
-        "text_color": "#1f2937",
+        "background_color": "#ffffff",
+        "border_color": "#e5e7eb",
+        "heading_color": "#1f2937",
+        "text_color": "#4b5563",
         "accent_color": "#dc2626",
-        "progress_bg_color": "#e5e7eb",
-        "progress_fill_color": "#10b981",
-        "button_bg_color": "#1f2937",
-        "button_text_color": "#ffffff",
-        "button_hover_color": "#374151",
-        "card_border_color": "#e5e7eb",
-        "card_selected_color": "#10b981",
-        "section_padding": 30,
-        "section_radius": 12,
-        "progress_height": 12,
-        "message_font_size": 18,
-        "title_font_size": 28,
-        "text_align": "center",
-        "grid_columns": 5,
-        "product_image_height": 120,
-        "grid_max_height": 450
+        "button_color": "#1f2937",
+        "button_text_color": "#ffffff"
       }
     }
   },
   "order": [
     "cart-items",
     "cart-footer",
-    "free_gift_threshold_nzXm9T"
+    "free_gift_threshold_eFJfPy"
   ]
 }
