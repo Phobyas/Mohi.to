@@ -45,7 +45,7 @@
         "gift_product_GRCRYp": {
           "type": "gift_product",
           "settings": {
-            "product": ""
+            "product": "labubu-have-a-seat-sisi-copy"
           }
         }
       },
@@ -54,7 +54,7 @@
       ],
       "name": "Darmowy Prezent - Próg",
       "settings": {
-        "threshold": 250,
+        "threshold": 2500,
         "title": "Darmowy prezent",
         "progress_message": "Dodaj produkty za [amount] aby otrzymać darmowy prezent!",
         "threshold_message": "🎉 Gratulacje! Wybierz swój darmowy prezent:",
