@@ -1,691 +1,1074 @@
 {% comment %}
-  Gift Threshold - All States Preloaded
+  Free Gift Threshold Section - Simple Version with Blocks
   File: sections/free-gift-threshold.liquid
 {% endcomment %}
 
 {%- liquid
+  # Get settings
+  assign threshold_amount = section.settings.threshold | times: 100
   assign cart_total = cart.total_price
-  assign threshold = section.settings.threshold | times: 100
-  assign remaining = threshold | minus: cart_total
-  assign sample_product = section.settings.sample_product
+  assign remaining = threshold_amount | minus: cart_total
   
-  if cart_total >= threshold
-    assign threshold_reached = true
+  # Check if threshold is met
+  if cart_total >= threshold_amount
+    assign threshold_met = true
   else
-    assign threshold_reached = false
+    assign threshold_met = false
   endif
   
+  # Calculate progress
   assign progress_percentage = 0
-  if cart_total > 0 and threshold > 0
-    assign progress_percentage = cart_total | times: 100.0 | divided_by: threshold
+  if cart_total > 0 and threshold_amount > 0
+    assign progress_percentage = cart_total | times: 100.0 | divided_by: threshold_amount
     if progress_percentage > 100
       assign progress_percentage = 100
     endif
   endif
   
-  assign has_sample = false
-  assign sample_info = ''
-  assign selected_product_handle = ''
-  assign selected_product_image = ''
+  # Check if any gift is already in cart
+  assign has_gift = false
+  assign selected_gift_info = ''
   
   for item in cart.items
-    assign is_free_sample = item.properties._is_free_sample | default: 'false'
-    if is_free_sample == 'true'
-      assign has_sample = true
-      assign sample_info = item.properties['Wybrany produkt'] | default: ''
-      assign selected_product_handle = item.properties._selected_product_handle | default: ''
-      assign selected_product_image = item.properties._selected_product_image | default: ''
+    if item.properties._is_free_gift == 'true'
+      assign has_gift = true
+      assign selected_gift_info = item.product.title
+      if item.variant.title != 'Default Title'
+        assign selected_gift_info = selected_gift_info | append: ' - ' | append: item.variant.title
+      endif
       break
     endif
   endfor
-  
-  if has_sample
-    assign initial_state = 'success'
-  elsif threshold_reached
-    assign initial_state = 'selector'
-  else
-    assign initial_state = 'info'
-  endif
 -%}
 
-{{ 'gift-threshold.css' | asset_url | stylesheet_tag }}
-<script src="{{ 'gift-threshold-validator.js' | asset_url }}" defer></script>
+<div class="free-gift-threshold" 
+     data-threshold="{{ threshold_amount }}"
+     data-section-id="{{ section.id }}">
 
-<style>
-  .gift-threshold {
-    background: {{ section.settings.section_bg_color }};
-    color: {{ section.settings.text_color }};
-    padding: {{ section.settings.section_padding }}px;
-    border-radius: {{ section.settings.section_radius }}px;
-    text-align: {{ section.settings.text_align }};
-    margin: 20px auto;
-    max-width: 1200px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  }
-  
-  /* State visibility control */
-  .gift-threshold[data-state="info"] .gift-threshold__info { display: block !important; }
-  .gift-threshold[data-state="info"] .gift-threshold__selector { display: none !important; }
-  .gift-threshold[data-state="info"] .gift-threshold__success { display: none !important; }
-  
-  .gift-threshold[data-state="selector"] .gift-threshold__info { display: none !important; }
-  .gift-threshold[data-state="selector"] .gift-threshold__selector { display: block !important; }
-  .gift-threshold[data-state="selector"] .gift-threshold__success { display: none !important; }
-  
-  .gift-threshold[data-state="success"] .gift-threshold__info { display: none !important; }
-  .gift-threshold[data-state="success"] .gift-threshold__selector { display: none !important; }
-  .gift-threshold[data-state="success"] .gift-threshold__success { display: block !important; }
-  
-  .gift-threshold__message {
-    font-size: {{ section.settings.message_font_size }}px;
-    margin-bottom: 20px;
-    font-weight: 500;
-  }
-  
-  .gift-threshold__amount {
-    color: {{ section.settings.accent_color }};
-    font-weight: 700;
-    font-size: 1.3em;
-  }
-  
-  .gift-threshold__title {
-    font-size: {{ section.settings.title_font_size }}px;
-    margin-bottom: 20px;
-    font-weight: 700;
-    color: {{ section.settings.text_color }};
-  }
-  
-  .gift-threshold__progress {
-    height: {{ section.settings.progress_height }}px;
-    background: #e5e7eb;
-    border-radius: {{ section.settings.progress_height | divided_by: 2 }}px;
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
-  
-  .gift-threshold__progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #22c55e, #16a34a);
-    transition: width 0.5s ease;
-  }
-  
-  .gift-threshold__search {
-    width: 100%;
-    max-width: 400px;
-    padding: 14px 20px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 16px;
-    margin: 0 auto 25px auto;
-    display: block;
-    background: white;
-  }
-  
-  .gift-threshold__search:focus {
-    outline: none;
-    border-color: {{ section.settings.accent_color }};
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-  }
-  
-  .gift-threshold__products-grid {
-    display: grid;
-    grid-template-columns: repeat({{ section.settings.grid_columns }}, 1fr);
-    gap: 16px;
-    max-height: {{ section.settings.grid_max_height }}px;
-    overflow-y: auto;
-    padding: 20px;
-    background: #f9fafb;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    margin-bottom: 25px;
-  }
-  
-  .gift-threshold__products-grid::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  .gift-threshold__products-grid::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 4px;
-  }
-  
-  .gift-threshold__products-grid::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 4px;
-  }
-  
-  .gift-threshold__product-card {
-    padding: 14px;
-    border: 2px solid {{ section.settings.card_border_color }};
-    border-radius: 10px;
-    text-align: center;
-    background: white;
-    position: relative;
-    transition: all 0.3s ease;
-    cursor: pointer;
-  }
-  
-  .gift-threshold__product-card:hover {
-    border-color: {{ section.settings.card_selected_color }};
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  }
-  
-  .gift-threshold__product-card.selected {
-    border-color: {{ section.settings.card_selected_color }};
-    background: linear-gradient(135deg, #ffffff, #f0fdf4);
-    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
-  }
-  
-  .gift-threshold__product-card.selected::after {
-    content: "✓";
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: {{ section.settings.card_selected_color }};
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
-  }
-  
-  .gift-threshold__product-image {
-    width: 100%;
-    height: {{ section.settings.product_image_height }}px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 12px;
-  }
-  
-  .gift-threshold__product-title {
-    font-size: 14px;
-    line-height: 1.4;
-    margin-bottom: 12px;
-    font-weight: 600;
-    min-height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #374151;
-  }
-  
-  .gift-threshold__variant-select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 13px;
-    background: white;
-    cursor: pointer;
-    margin-top: 6px;
-  }
-  
-  .gift-threshold__variant-select:focus {
-    outline: 2px solid {{ section.settings.accent_color }};
-    outline-offset: 1px;
-  }
-  
-  .gift-threshold__choose-btn {
-    width: 100%;
-    padding: 11px;
-    background: {{ section.settings.button_bg_color }};
-    color: {{ section.settings.button_text_color }};
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 6px;
-    transition: all 0.3s ease;
-  }
-  
-  .gift-threshold__choose-btn:hover {
-    background: {{ section.settings.button_hover_color }};
-    transform: translateY(-1px);
-  }
-  
-  .gift-threshold__selected {
-    padding: 24px;
-    background: linear-gradient(135deg, #f8f9fa, #f0fdf4);
-    border-radius: 10px;
-    margin-top: 25px;
-    border: 2px solid {{ section.settings.card_selected_color }};
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
-  }
-  
-  .gift-threshold__selected-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 20px;
-    padding: 16px;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-  }
-  
-  .gift-threshold__selected-image {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 2px solid {{ section.settings.card_selected_color }};
-  }
-  
-  .gift-threshold__selected-details {
-    flex: 1;
-    text-align: left;
-  }
-  
-  .gift-threshold__selected-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #065f46;
-    margin-bottom: 4px;
-  }
-  
-  .gift-threshold__selected-variant {
-    font-size: 14px;
-    color: #6b7280;
-    margin-bottom: 4px;
-  }
-  
-  .gift-threshold__selected-price {
-    font-size: 14px;
-    color: #059669;
-    font-weight: 600;
-  }
-  
-  .gift-threshold__button {
-    padding: 16px 32px;
-    background: linear-gradient(135deg, {{ section.settings.button_bg_color }}, {{ section.settings.button_hover_color }});
-    color: {{ section.settings.button_text_color }};
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    width: 100%;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  
-  .gift-threshold__button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .gift-threshold__success {
-    text-align: center;
-    padding: 36px;
-    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-    border-radius: 12px;
-    border: 2px solid {{ section.settings.card_selected_color }};
-  }
-  
-  .gift-threshold__success-info {
-    display: inline-flex;
-    align-items: center;
-    gap: 16px;
-    margin: 24px auto;
-    padding: 16px;
-    background: white;
-    border: 2px solid #10b981;
-    border-radius: 8px;
-  }
-  
-  .gift-threshold__success-image {
-    width: 60px;
-    height: 60px;
-    object-fit: cover;
-    border-radius: 6px;
-  }
-  
-  .gift-threshold__error {
-    background: #fef2f2;
-    border: 2px solid #fca5a5;
-    border-radius: 10px;
-    padding: 18px;
-    color: #dc2626;
-    text-align: center;
-    margin-bottom: 22px;
-  }
-  
-  .gift-threshold__progress-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #6b7280;
-  }
-  
-  @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  
-  @media (max-width: 768px) {
-    .gift-threshold__products-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .gift-threshold__products-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
-
-<div class="gift-threshold" 
-     data-threshold="{{ threshold }}"
-     data-cart-total="{{ cart_total }}"
-     data-sample-id="{{ sample_product.variants.first.id }}"
-     data-state="{{ initial_state }}">
-  
-  {%- if sample_product == blank -%}
-    <div class="gift-threshold__error">
-      <strong>⚠️ Błąd konfiguracji:</strong> Nie wybrano produktu próbki.
-    </div>
-    
-  {%- else -%}
-    
-    <!-- Info State - Always Rendered -->
-    <div class="gift-threshold__info" style="display: none;">
-      <h3 class="gift-threshold__title">🎁 Darmowa próbka</h3>
-      <p class="gift-threshold__message">
-        {{ section.settings.message_before | replace: '[amount]', '<span class="gift-threshold__amount">' | append: remaining | money | append: '</span>' }}
+  <div class="gift-container">
+    <!-- Progress State -->
+    <div class="gift-state gift-state--progress" data-state="progress" style="{% if has_gift or threshold_met %}display: none;{% endif %}">
+      <h3 class="gift-header">
+        <span class="gift-icon">🎁</span>
+        {{ section.settings.title }}
+      </h3>
+      
+      <p class="gift-message">
+        {{ section.settings.progress_message | replace: '[amount]', '<strong class="remaining-amount" data-amount="' | append: remaining | append: '">' | append: remaining | money | append: '</strong>' }}
       </p>
       
       {%- if section.settings.show_progress_bar -%}
-        <div class="gift-threshold__progress">
-          <div class="gift-threshold__progress-bar" style="width: {{ progress_percentage }}%"></div>
+        <div class="gift-progress-bar">
+          <div class="gift-progress-fill" data-progress="{{ progress_percentage }}" style="width: {{ progress_percentage }}%"></div>
         </div>
-        <div class="gift-threshold__progress-info">
-          <span>{{ progress_percentage | round }}% do darmowej próbki</span>
-          <span style="font-weight: 600;">Brakuje: {{ remaining | money }}</span>
-        </div>
+        <p class="gift-progress-text">
+          <span class="progress-percentage">{{ progress_percentage | round }}</span>% do darmowego prezentu
+        </p>
       {%- endif -%}
     </div>
-    
-    <!-- Selector State - Always Rendered -->
-    <div class="gift-threshold__selector" style="display: none;">
-      <h3 class="gift-threshold__title">{{ section.settings.choose_title }}</h3>
-      <p style="text-align: center; color: #6b7280; margin-bottom: 20px;">
-        Wybierz produkt, którego próbkę chcesz otrzymać bezpłatnie
-      </p>
+
+    <!-- Selector State -->
+    <div class="gift-state gift-state--selector" data-state="selector" style="{% unless threshold_met and has_gift == false %}display: none;{% endunless %}">
+      <h3 class="gift-header">
+        <span class="gift-icon">🎉</span>
+        {{ section.settings.title }}
+      </h3>
       
-      <input type="text" 
-             class="gift-threshold__search" 
-             id="product-search" 
-             placeholder="{{ section.settings.search_placeholder }}">
+      <p class="gift-message">{{ section.settings.threshold_message }}</p>
       
-      <div class="gift-threshold__products-grid" id="products-list">
-        {%- for product in collections.all.products limit: section.settings.products_limit -%}
-          {%- unless product.id == sample_product.id or product.price == 0 -%}
-            <div class="gift-threshold__product-card" 
-                 data-product-id="{{ product.id }}"
-                 data-product-title="{{ product.title | escape }}"
-                 data-product-handle="{{ product.handle }}"
-                 data-product-image="{{ product.featured_image | image_url: width: 300 }}">
-              
-              {%- if product.featured_image -%}
-                <img class="gift-threshold__product-image" 
-                     src="{{ product.featured_image | image_url: width: 300 }}"
-                     alt="{{ product.title | escape }}"
-                     loading="lazy">
-              {%- else -%}
-                <div class="gift-threshold__product-image" style="background: #f3f4f6;"></div>
-              {%- endif -%}
-              
-              <div class="gift-threshold__product-title">{{ product.title | truncate: 45 }}</div>
-              
-              {%- if product.variants.size > 1 -%}
-                <select class="gift-threshold__variant-select" 
-                        data-product-id="{{ product.id }}"
-                        onchange="window.giftThreshold.selectProductVariant(this)">
-                  <option value="">Wybierz wariant</option>
-                  {%- for variant in product.variants -%}
-                    {%- if variant.available -%}
-                      <option value="{{ variant.id }}" 
-                              data-title="{{ variant.title | escape }}"
-                              data-price="{{ variant.price | money }}">
-                        {{ variant.title }}
-                      </option>
-                    {%- endif -%}
-                  {%- endfor -%}
-                </select>
-              {%- else -%}
-                <button class="gift-threshold__choose-btn"
-                        onclick="window.giftThreshold.selectProduct('{{ product.title | escape }}', '{{ product.variants.first.id }}', '{{ product.variants.first.title | escape }}', '{{ product.handle }}', this)">
-                  {{ section.settings.select_button_text }}
-                </button>
-              {%- endif -%}
-            </div>
-          {%- endunless -%}
+      <!-- Gift Products Grid -->
+      <div class="gift-products-grid">
+        {%- assign has_products = false -%}
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'gift_product' -%}
+            {%- assign product = all_products[block.settings.product] -%}
+            {%- if product and product.available -%}
+              {%- assign has_products = true -%}
+              <div class="gift-product-card" data-product-id="{{ product.id }}">
+                {%- if product.featured_image -%}
+                  <div class="gift-product-image-wrapper">
+                    <img src="{{ product.featured_image | image_url: width: 200 }}" 
+                         alt="{{ product.title | escape }}"
+                         class="gift-product-image"
+                         loading="lazy">
+                  </div>
+                {%- endif -%}
+                
+                <h4 class="gift-product-title">{{ product.title | truncate: 40 }}</h4>
+                
+                {%- if product.variants.size > 1 -%}
+                  <select class="gift-variant-select" data-product-id="{{ product.id }}">
+                    <option value="">Wybierz wariant...</option>
+                    {%- for variant in product.variants -%}
+                      {%- if variant.available -%}
+                        <option value="{{ variant.id }}" 
+                                data-title="{{ variant.title | escape }}"
+                                data-price="{{ variant.price }}"
+                                data-image="{% if variant.image %}{{ variant.image | image_url: width: 200 }}{% else %}{{ product.featured_image | image_url: width: 200 }}{% endif %}">
+                          {{ variant.title }}
+                        </option>
+                      {%- endif -%}
+                    {%- endfor -%}
+                  </select>
+                {%- else -%}
+                  {%- assign first_variant = product.variants.first -%}
+                  {%- if first_variant and first_variant.available -%}
+                    <button class="gift-select-btn"
+                            data-variant-id="{{ first_variant.id }}"
+                            data-title="{{ product.title | escape }}"
+                            data-price="{{ first_variant.price }}"
+                            data-image="{{ product.featured_image | image_url: width: 200 }}">
+                      Wybierz
+                    </button>
+                  {%- endif -%}
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+          {%- endif -%}
         {%- endfor -%}
+        
+        {%- unless has_products -%}
+          <p style="text-align: center; color: #6b7280; padding: 20px;">
+            Brak dostępnych produktów. Dodaj produkty używając bloków w edytorze motywu.
+          </p>
+        {%- endunless -%}
       </div>
       
-      <div class="gift-threshold__selected" id="selected-product" style="display: none;">
-        <h4>✅ Wybrany produkt</h4>
-        <div class="gift-threshold__selected-info" id="selected-info">
-          <!-- Will be populated by JavaScript -->
+      <!-- Selected Product Display -->
+      <div class="gift-selected" style="display: none;">
+        <div class="gift-selected-info">
+          <img class="gift-selected-image" src="" alt="">
+          <div class="gift-selected-details">
+            <h4>Wybrany prezent:</h4>
+            <p class="gift-selected-title"></p>
+          </div>
         </div>
-        
-        <button class="gift-threshold__button" id="add-sample-btn" disabled>
+        <button class="gift-button-primary gift-add-btn">
           {{ section.settings.add_button_text }}
         </button>
       </div>
     </div>
-    
-    <!-- Success State - Always Rendered -->
-    <div class="gift-threshold__success" style="display: none;">
-      <h3>🎁 {{ section.settings.success_title }}</h3>
+
+    <!-- Success State -->
+    <div class="gift-state gift-state--success" data-state="success" style="{% unless has_gift %}display: none;{% endunless %}">
+      <h3 class="gift-header">
+        <span class="gift-icon">✓</span>
+        {{ section.settings.title }}
+      </h3>
       
-      <div class="gift-threshold__success-info" id="success-info">
-        {%- if selected_product_image != blank -%}
-          <img src="{{ selected_product_image }}" 
-               alt="{{ sample_info }}"
-               class="gift-threshold__success-image">
+      <div class="gift-success-message">
+        <p><strong>{{ section.settings.success_message }}</strong></p>
+        {%- if selected_gift_info != blank -%}
+          <p class="gift-selected-info-text">Wybrany prezent: {{ selected_gift_info }}</p>
         {%- endif -%}
-        <div style="text-align: left;">
-          <div style="font-weight: 700; color: #065f46; margin-bottom: 4px;">Wybrana próbka:</div>
-          <div style="color: #059669;" id="success-sample-info">{{ sample_info }}</div>
-        </div>
       </div>
-      
-      <p>{{ section.settings.success_message }}</p>
     </div>
-    
-  {%- endif -%}
+  </div>
+
 </div>
 
-<script>
-// Gift Threshold System
-window.giftThreshold = {
-  selectedProduct: null,
-  sampleId: document.querySelector('.gift-threshold').dataset.sampleId,
+<style>
+  .free-gift-threshold {
+    max-width: 1200px;
+    margin: 0 auto 20px;
+  }
   
-  selectProduct: function(title, variantId, variantTitle, handle, button) {
-    document.querySelectorAll('.gift-threshold__product-card').forEach(card => {
-      card.classList.remove('selected');
-    });
-    
-    const card = button.closest('.gift-threshold__product-card');
-    card.classList.add('selected');
-    
-    this.selectedProduct = {
-      title: title,
-      variantId: variantId,
-      variantTitle: variantTitle,
-      handle: handle,
-      image: card.dataset.productImage
-    };
-    
-    this.showSelectedProduct();
-  },
+  .gift-container {
+    background: {{ section.settings.background_color }};
+    border: 1px solid {{ section.settings.border_color }};
+    border-radius: 8px;
+    padding: 20px;
+    transition: opacity 0.3s ease;
+  }
   
-  selectProductVariant: function(select) {
-    if (!select.value) return;
-    
-    const card = select.closest('.gift-threshold__product-card');
-    const option = select.options[select.selectedIndex];
-    
-    document.querySelectorAll('.gift-threshold__product-card').forEach(c => {
-      c.classList.remove('selected');
-    });
-    
-    card.classList.add('selected');
-    
-    this.selectedProduct = {
-      title: card.dataset.productTitle,
-      variantId: select.value,
-      variantTitle: option.dataset.title || option.textContent,
-      handle: card.dataset.productHandle,
-      image: card.dataset.productImage,
-      price: option.dataset.price
-    };
-    
-    this.showSelectedProduct();
-  },
+  .gift-state {
+    animation: fadeIn 0.3s ease;
+  }
   
-  showSelectedProduct: async function() {
-    const selectedDiv = document.getElementById('selected-product');
-    const selectedInfo = document.getElementById('selected-info');
-    const addBtn = document.getElementById('add-sample-btn');
-    
-    if (!this.selectedProduct) return;
-    
-    try {
-      const response = await fetch(`/products/${this.selectedProduct.handle}.js`);
-      const product = await response.json();
-      
-      const variant = product.variants.find(v => v.id == this.selectedProduct.variantId);
-      
-      selectedInfo.innerHTML = `
-        <img src="${product.featured_image || this.selectedProduct.image}" 
-             alt="${product.title}" 
-             class="gift-threshold__selected-image">
-        <div class="gift-threshold__selected-details">
-          <div class="gift-threshold__selected-title">${product.title}</div>
-          ${variant && variant.title !== 'Default Title' ? 
-            `<div class="gift-threshold__selected-variant">Wariant: ${variant.title}</div>` : ''}
-          <div class="gift-threshold__selected-price">Wartość: ${(variant ? variant.price / 100 : product.price / 100).toFixed(2)} zł</div>
-        </div>
-      `;
-    } catch (error) {
-      selectedInfo.innerHTML = `
-        ${this.selectedProduct.image ? 
-          `<img src="${this.selectedProduct.image}" 
-                alt="${this.selectedProduct.title}" 
-                class="gift-threshold__selected-image">` : ''}
-        <div class="gift-threshold__selected-details">
-          <div class="gift-threshold__selected-title">${this.selectedProduct.title}</div>
-          ${this.selectedProduct.variantTitle !== 'Default Title' ? 
-            `<div class="gift-threshold__selected-variant">Wariant: ${this.selectedProduct.variantTitle}</div>` : ''}
-        </div>
-      `;
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .gift-header {
+    color: {{ section.settings.heading_color }};
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .gift-icon {
+    font-size: 20px;
+  }
+  
+  .gift-message {
+    color: {{ section.settings.text_color }};
+    margin-bottom: 15px;
+    font-size: 14px;
+  }
+  
+  .gift-message strong {
+    color: {{ section.settings.accent_color }};
+    font-size: 16px;
+  }
+  
+  .gift-progress-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 12px 0 8px;
+  }
+  
+  .gift-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    transition: width 0.5s ease;
+  }
+  
+  .gift-progress-text {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+  }
+  
+  .gift-products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 15px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-bottom: 15px;
+  }
+  
+  .gift-products-grid::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .gift-products-grid::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+  }
+  
+  .gift-products-grid::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+  }
+  
+  .gift-product-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .gift-product-card:hover {
+    border-color: {{ section.settings.accent_color }};
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  
+  .gift-product-card.selected {
+    border-color: #10b981;
+    background: #f0fdf4;
+  }
+  
+  .gift-product-image-wrapper {
+    width: 100%;
+    height: 100px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    border-radius: 4px;
+  }
+  
+  .gift-product-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  
+  .gift-product-title {
+    font-size: 12px;
+    margin: 0 0 8px 0;
+    color: #374151;
+    line-height: 1.3;
+    min-height: 30px;
+  }
+  
+  .gift-variant-select,
+  .gift-select-btn {
+    width: 100%;
+    padding: 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .gift-variant-select {
+    border: 1px solid #d1d5db;
+    background: white;
+  }
+  
+  .gift-select-btn {
+    background: {{ section.settings.button_color }};
+    color: {{ section.settings.button_text_color }};
+    border: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+  }
+  
+  .gift-select-btn:hover {
+    opacity: 0.85;
+  }
+  
+  .gift-selected {
+    padding: 15px;
+    background: #f0fdf4;
+    border: 1px solid #10b981;
+    border-radius: 6px;
+    margin-top: 15px;
+  }
+  
+  .gift-selected-info {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .gift-selected-image {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    background: white;
+    border-radius: 4px;
+    padding: 4px;
+  }
+  
+  .gift-selected-details h4 {
+    margin: 0 0 4px 0;
+    color: #065f46;
+    font-size: 13px;
+  }
+  
+  .gift-selected-title {
+    margin: 0;
+    font-size: 14px;
+    color: #374151;
+    font-weight: 500;
+  }
+  
+  .gift-button-primary {
+    width: 100%;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  
+  .gift-button-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
+  }
+  
+  .gift-button-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .gift-success-message {
+    padding: 12px;
+    background: #f0fdf4;
+    border-left: 3px solid #10b981;
+    border-radius: 4px;
+  }
+  
+  .gift-success-message p {
+    margin: 0;
+    color: #065f46;
+    font-size: 14px;
+  }
+  
+  .gift-selected-info-text {
+    margin-top: 6px !important;
+    font-size: 13px !important;
+    opacity: 0.9;
+  }
+  
+  /* Loading state */
+  .gift-threshold-loading {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+  
+  /* Notification */
+  .gift-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 99999;
+    max-width: 280px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    animation: slideIn 0.3s ease;
+  }
+  
+  .gift-notification--success {
+    background: #10b981;
+    color: white;
+  }
+  
+  .gift-notification--warning {
+    background: #f59e0b;
+    color: white;
+  }
+  
+  .gift-notification--error {
+    background: #ef4444;
+    color: white;
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @media (max-width: 640px) {
+    .gift-products-grid {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      padding: 12px;
     }
     
-    selectedDiv.style.display = 'block';
-    addBtn.disabled = false;
-    selectedDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  },
-  
-  addToCart: async function() {
-    const addBtn = document.getElementById('add-sample-btn');
-    
-    if (!this.selectedProduct || !this.sampleId) return;
-    
-    addBtn.disabled = true;
-    addBtn.textContent = 'Dodawanie...';
-    
-    try {
-      const formData = new FormData();
-      formData.append('id', this.sampleId);
-      formData.append('quantity', '1');
-      formData.append('properties[_is_free_sample]', 'true');
-      formData.append('properties[_selected_product_title]', this.selectedProduct.title);
-      formData.append('properties[_selected_product_handle]', this.selectedProduct.handle);
-      formData.append('properties[_selected_product_image]', this.selectedProduct.image || '');
-      formData.append('properties[Wybrany produkt]', 
-        `${this.selectedProduct.title}${this.selectedProduct.variantTitle !== 'Default Title' ? 
-          ' - ' + this.selectedProduct.variantTitle : ''}`);
+    .gift-container {
+      padding: 15px;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  class FreeGiftManager {
+    constructor(section) {
+      this.section = section;
+      this.threshold = parseInt(section.dataset.threshold);
+      this.sectionId = section.dataset.sectionId;
+      this.selectedGift = null;
+      this.isProcessing = false;
+      this.cartData = null;
       
-      const response = await fetch('/cart/add.js', {
-        method: 'POST',
-        body: formData
+      this.init();
+    }
+    
+    async init() {
+      // Get initial cart state
+      await this.fetchCart();
+      
+      // Set up event listeners
+      this.attachEventListeners();
+      
+      // Monitor cart changes
+      this.monitorCartChanges();
+      
+      // Initial UI update
+      this.updateUI();
+    }
+    
+    attachEventListeners() {
+      // Product selection
+      this.section.addEventListener('click', (e) => {
+        if (e.target.classList.contains('gift-select-btn')) {
+          this.selectProduct(e.target);
+        }
       });
       
-      if (response.ok) {
-        // Update success info immediately
-        const successInfo = document.getElementById('success-sample-info');
-        if (successInfo) {
-          successInfo.textContent = `${this.selectedProduct.title}${this.selectedProduct.variantTitle !== 'Default Title' ? 
-            ' - ' + this.selectedProduct.variantTitle : ''}`;
+      // Variant selection
+      this.section.addEventListener('change', (e) => {
+        if (e.target.classList.contains('gift-variant-select')) {
+          this.selectVariant(e.target);
+        }
+      });
+      
+      // Add gift button
+      const addBtn = this.section.querySelector('.gift-add-btn');
+      if (addBtn) {
+        addBtn.addEventListener('click', () => this.addGiftToCart());
+      }
+    }
+    
+    monitorCartChanges() {
+      // Listen to Dawn theme cart events if available
+      if (typeof subscribe !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
+        subscribe(PUB_SUB_EVENTS.cartUpdate, async (event) => {
+          // Skip if this update was triggered by our gift manager
+          if (event.source === 'free-gift-add' || event.source === 'free-gift-remove') {
+            return;
+          }
+          
+          // Fetch fresh cart data
+          await this.fetchCart();
+          this.updateUI();
+        });
+      }
+      
+      // Intercept cart API calls
+      const originalFetch = window.fetch;
+      window.fetch = async (...args) => {
+        const response = await originalFetch.apply(window, args);
+        const url = args[0];
+        
+        if (typeof url === 'string' && 
+            (url.includes('/cart/add') || 
+             url.includes('/cart/update') || 
+             url.includes('/cart/change') || 
+             url.includes('/cart/clear'))) {
+          
+          // Skip if it's our own request
+          const body = args[1]?.body;
+          if (body && body.includes('_is_free_gift')) {
+            return response;
+          }
+          
+          // Wait a bit for cart to update
+          setTimeout(async () => {
+            await this.fetchCart();
+            this.updateUI();
+          }, 100);
         }
         
-        // Switch to success state
-        const section = document.querySelector('.gift-threshold');
-        if (section) {
-          section.dataset.state = 'success';
+        return response;
+      };
+      
+      // Listen for quantity changes in cart
+      document.addEventListener('change', async (e) => {
+        if (e.target.matches('[name="updates[]"], .quantity__input')) {
+          setTimeout(async () => {
+            await this.fetchCart();
+            this.updateUI();
+          }, 500);
+        }
+      });
+      
+      // Listen for remove button clicks
+      document.addEventListener('click', async (e) => {
+        if (e.target.closest('cart-remove-button, [href*="/cart/change"], .cart-item__remove')) {
+          setTimeout(async () => {
+            await this.fetchCart();
+            this.updateUI();
+          }, 500);
+        }
+      });
+    }
+    
+    async fetchCart() {
+      try {
+        const response = await fetch(window.Shopify.routes.root + 'cart.js');
+        this.cartData = await response.json();
+        return this.cartData;
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        return null;
+      }
+    }
+    
+    updateUI() {
+      if (!this.cartData) return;
+      
+      const states = {
+        progress: this.section.querySelector('.gift-state--progress'),
+        selector: this.section.querySelector('.gift-state--selector'),
+        success: this.section.querySelector('.gift-state--success')
+      };
+      
+      // Check for existing gift
+      const giftItem = this.cartData.items.find(item => 
+        item.properties && item.properties._is_free_gift === 'true'
+      );
+      const hasGift = !!giftItem;
+      
+      // Determine current state
+      const thresholdMet = this.cartData.total_price >= this.threshold;
+      
+      // Check if gift needs to be removed (has gift but threshold not met)
+      if (hasGift && !thresholdMet) {
+        // Don't update UI yet, wait for gift removal
+        this.removeGift();
+        return;
+      }
+      
+      // Hide all states
+      Object.values(states).forEach(state => {
+        if (state) state.style.display = 'none';
+      });
+      
+      // Show appropriate state
+      if (hasGift) {
+        if (states.success) {
+          states.success.style.display = 'block';
+          this.updateSuccessInfo();
+        }
+      } else if (thresholdMet) {
+        if (states.selector) {
+          states.selector.style.display = 'block';
         }
       } else {
-        throw new Error('Failed to add to cart');
+        if (states.progress) {
+          states.progress.style.display = 'block';
+          this.updateProgress();
+        }
       }
-    } catch (error) {
-      console.error('Error:', error);
-      addBtn.disabled = false;
-      addBtn.textContent = 'Spróbuj ponownie';
+    }
+    
+    updateProgress() {
+      const remaining = Math.max(0, this.threshold - this.cartData.total_price);
+      const percentage = Math.min((this.cartData.total_price / this.threshold) * 100, 100);
+      
+      // Update remaining amount
+      const remainingEl = this.section.querySelector('.remaining-amount');
+      if (remainingEl) {
+        remainingEl.textContent = this.formatMoney(remaining);
+      }
+      
+      // Update progress bar
+      const progressFill = this.section.querySelector('.gift-progress-fill');
+      if (progressFill) {
+        progressFill.style.width = percentage + '%';
+      }
+      
+      // Update percentage text
+      const percentageEl = this.section.querySelector('.progress-percentage');
+      if (percentageEl) {
+        percentageEl.textContent = Math.round(percentage);
+      }
+    }
+    
+    updateSuccessInfo() {
+      const giftItem = this.cartData.items.find(item => 
+        item.properties && item.properties._is_free_gift === 'true'
+      );
+      
+      if (giftItem) {
+        const infoEl = this.section.querySelector('.gift-selected-info-text');
+        if (infoEl) {
+          let title = giftItem.product_title;
+          if (giftItem.variant_title && giftItem.variant_title !== 'Default Title') {
+            title += ' - ' + giftItem.variant_title;
+          }
+          infoEl.textContent = 'Wybrany prezent: ' + title;
+        }
+      }
+    }
+    
+    selectProduct(button) {
+      // Clear previous selections
+      this.section.querySelectorAll('.gift-product-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      
+      // Mark as selected
+      const card = button.closest('.gift-product-card');
+      card.classList.add('selected');
+      
+      // Store selection
+      this.selectedGift = {
+        variantId: button.dataset.variantId,
+        title: button.dataset.title,
+        price: button.dataset.price,
+        image: button.dataset.image
+      };
+      
+      this.showSelectedGift();
+    }
+    
+    selectVariant(select) {
+      if (!select.value) return;
+      
+      // Clear previous selections
+      this.section.querySelectorAll('.gift-product-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      
+      // Mark as selected
+      const card = select.closest('.gift-product-card');
+      card.classList.add('selected');
+      
+      const option = select.options[select.selectedIndex];
+      
+      // Store selection
+      this.selectedGift = {
+        variantId: select.value,
+        title: card.querySelector('.gift-product-title').textContent + 
+               (option.dataset.title !== 'Default Title' ? ' - ' + option.dataset.title : ''),
+        price: option.dataset.price,
+        image: option.dataset.image
+      };
+      
+      this.showSelectedGift();
+    }
+    
+    showSelectedGift() {
+      const selectedDiv = this.section.querySelector('.gift-selected');
+      if (!selectedDiv || !this.selectedGift) return;
+      
+      // Update image
+      const img = selectedDiv.querySelector('.gift-selected-image');
+      if (img) {
+        img.src = this.selectedGift.image;
+        img.alt = this.selectedGift.title;
+      }
+      
+      // Update title
+      const titleEl = selectedDiv.querySelector('.gift-selected-title');
+      if (titleEl) {
+        titleEl.textContent = this.selectedGift.title;
+      }
+      
+      // Show the selected div
+      selectedDiv.style.display = 'block';
+      selectedDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    async addGiftToCart() {
+      if (this.isProcessing || !this.selectedGift) return;
+      
+      const button = this.section.querySelector('.gift-add-btn');
+      if (!button) return;
+      
+      this.isProcessing = true;
+      button.disabled = true;
+      button.textContent = 'Dodawanie...';
+      
+      try {
+        const formData = {
+          items: [{
+            id: parseInt(this.selectedGift.variantId),
+            quantity: 1,
+            properties: {
+              '_is_free_gift': 'true',
+              '_original_price': this.selectedGift.price
+            }
+          }]
+        };
+        
+        const response = await fetch(window.Shopify.routes.root + 'cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.description || 'Błąd dodawania prezentu');
+        }
+        
+        // Show success
+        button.textContent = '✓ Dodano!';
+        this.showNotification('Prezent został dodany do koszyka!', 'success');
+        
+        // Refresh cart
+        await this.fetchCart();
+        this.updateUI();
+        
+        // Trigger cart update event if available
+        if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
+          publish(PUB_SUB_EVENTS.cartUpdate, { source: 'free-gift-add' });
+        }
+        
+      } catch (error) {
+        console.error('Error adding gift:', error);
+        button.textContent = 'Spróbuj ponownie';
+        this.showNotification('Nie można dodać prezentu: ' + error.message, 'error');
+      } finally {
+        this.isProcessing = false;
+        
+        setTimeout(() => {
+          if (button) {
+            button.disabled = false;
+            button.textContent = '{{ section.settings.add_button_text }}';
+          }
+        }, 2000);
+      }
+    }
+    
+    async removeGift() {
+      const giftItem = this.cartData.items.find(item => 
+        item.properties && item.properties._is_free_gift === 'true'
+      );
+      
+      if (!giftItem) return;
+      
+      // Show loading state on section
+      this.section.classList.add('gift-threshold-loading');
+      
+      try {
+        const response = await fetch(window.Shopify.routes.root + 'cart/change.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: giftItem.key,
+            quantity: 0
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to remove gift');
+        }
+        
+        const updatedCart = await response.json();
+        
+        this.showNotification('Prezent został usunięty (koszyk poniżej progu)', 'warning');
+        
+        // Update local cart data
+        this.cartData = updatedCart;
+        
+        // Update cart UI without page refresh
+        this.updateCartUI(updatedCart);
+        
+        // Update gift section UI
+        this.updateUI();
+        
+        // Trigger Dawn theme cart update if available
+        if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
+          publish(PUB_SUB_EVENTS.cartUpdate, { 
+            source: 'free-gift-remove',
+            cartData: updatedCart
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error removing gift:', error);
+        this.showNotification('Błąd podczas usuwania prezentu', 'error');
+      } finally {
+        this.section.classList.remove('gift-threshold-loading');
+      }
+    }
+    
+    updateCartUI(cartData) {
+      // Update cart count in header if exists
+      const cartCount = document.querySelector('.cart-count-bubble');
+      if (cartCount) {
+        const count = cartCount.querySelector('span[aria-hidden="true"]');
+        if (count) {
+          count.textContent = cartData.item_count;
+        }
+      }
+      
+      // Update cart items if on cart page
+      if (window.location.pathname.includes('/cart')) {
+        // Update cart totals
+        const cartSubtotal = document.querySelector('.totals__subtotal-value');
+        if (cartSubtotal) {
+          cartSubtotal.textContent = this.formatMoney(cartData.items_subtotal_price);
+        }
+        
+        const cartTotal = document.querySelector('.totals__total-value');
+        if (cartTotal) {
+          cartTotal.textContent = this.formatMoney(cartData.total_price);
+        }
+        
+        // Remove gift item row from cart table
+        const giftItem = cartData.items.find(item => 
+          item.properties && item.properties._is_free_gift === 'true'
+        );
+        
+        if (!giftItem) {
+          // Gift was removed, find and remove its row
+          const cartRows = document.querySelectorAll('.cart-item');
+          cartRows.forEach(row => {
+            const titleElement = row.querySelector('.cart-item__name');
+            if (titleElement && titleElement.textContent.includes('PREZENT:')) {
+              row.style.opacity = '0';
+              row.style.transition = 'opacity 0.3s ease';
+              setTimeout(() => {
+                row.remove();
+                // Update row indices
+                this.updateCartRowIndices();
+              }, 300);
+            }
+          });
+        }
+      }
+      
+      // Update cart drawer if open
+      const cartDrawer = document.querySelector('cart-drawer');
+      if (cartDrawer && cartDrawer.classList.contains('active')) {
+        // Trigger cart drawer refresh
+        const cartDrawerItems = document.querySelector('cart-drawer-items');
+        if (cartDrawerItems && cartDrawerItems.onCartUpdate) {
+          cartDrawerItems.onCartUpdate();
+        }
+      }
+    }
+    
+    updateCartRowIndices() {
+      // Re-index cart items after removal
+      const cartItems = document.querySelectorAll('.cart-item');
+      cartItems.forEach((item, index) => {
+        const newIndex = index + 1;
+        // Update IDs
+        if (item.id) {
+          item.id = item.id.replace(/\d+$/, newIndex);
+        }
+        // Update quantity input data-index
+        const quantityInput = item.querySelector('.quantity__input');
+        if (quantityInput) {
+          quantityInput.dataset.index = newIndex;
+        }
+        // Update remove button data-index
+        const removeButton = item.querySelector('cart-remove-button');
+        if (removeButton) {
+          removeButton.dataset.index = newIndex;
+        }
+      });
+    }
+    
+    formatMoney(cents) {
+      return (cents / 100).toFixed(2).replace('.', ',') + ' zł';
+    }
+    
+    showNotification(message, type = 'info') {
+      // Remove existing notifications
+      document.querySelectorAll('.gift-notification').forEach(n => n.remove());
+      
+      const notification = document.createElement('div');
+      notification.className = `gift-notification gift-notification--${type}`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      // Auto-remove after 3 seconds
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+      
+      // Click to dismiss
+      notification.addEventListener('click', () => notification.remove());
     }
   }
-};
-
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
-  const searchInput = document.getElementById('product-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', function(e) {
-      const query = e.target.value.toLowerCase();
-      document.querySelectorAll('.gift-threshold__product-card').forEach(card => {
-        const title = card.dataset.productTitle.toLowerCase();
-        card.style.display = title.includes(query) ? '' : 'none';
-      });
+  
+  // Initialize when DOM is ready
+  function initGiftThreshold() {
+    document.querySelectorAll('.free-gift-threshold').forEach(section => {
+      if (!section.giftManager) {
+        section.giftManager = new FreeGiftManager(section);
+      }
     });
   }
   
-  const addBtn = document.getElementById('add-sample-btn');
-  if (addBtn) {
-    addBtn.onclick = () => window.giftThreshold.addToCart();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGiftThreshold);
+  } else {
+    initGiftThreshold();
   }
-});
+  
+  // Re-initialize on Shopify section reloads
+  document.addEventListener('shopify:section:load', (event) => {
+    const section = event.target.querySelector('.free-gift-threshold');
+    if (section) {
+      section.giftManager = new FreeGiftManager(section);
+    }
+  });
+})();
 </script>
 
 {% schema %}
 {
-  "name": "Gift Threshold",
+  "name": "Darmowy Prezent - Próg",
   "tag": "section",
-  "class": "section",
+  "class": "free-gift-section",
+  "blocks": [
+    {
+      "type": "gift_product",
+      "name": "Produkt prezentowy",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Produkt"
+        }
+      ]
+    }
+  ],
   "settings": [
     {
       "type": "header",
       "content": "⚙️ Konfiguracja"
     },
     {
-      "type": "product",
-      "id": "sample_product",
-      "label": "Produkt próbki (0 zł)",
-      "info": "Wybierz uniwersalny produkt próbki z ceną 0 zł"
-    },
-    {
       "type": "number",
       "id": "threshold",
-      "label": "Próg (PLN)",
-      "default": 250
+      "label": "Próg kwotowy (PLN)",
+      "default": 250,
+      "info": "Minimalna wartość koszyka do otrzymania prezentu"
+    },
+    {
+      "type": "header",
+      "content": "📝 Teksty"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Tytuł sekcji",
+      "default": "Darmowy prezent"
+    },
+    {
+      "type": "textarea",
+      "id": "progress_message",
+      "label": "Komunikat przed progiem",
+      "default": "Dodaj produkty za [amount] aby otrzymać darmowy prezent!"
+    },
+    {
+      "type": "text",
+      "id": "threshold_message",
+      "label": "Komunikat po osiągnięciu progu",
+      "default": "🎉 Gratulacje! Wybierz swój darmowy prezent:"
+    },
+    {
+      "type": "text",
+      "id": "success_message",
+      "label": "Komunikat po dodaniu",
+      "default": "Prezent został dodany do koszyka!"
+    },
+    {
+      "type": "text",
+      "id": "add_button_text",
+      "label": "Tekst przycisku",
+      "default": "Dodaj darmowy prezent"
+    },
+    {
+      "type": "header",
+      "content": "🎨 Wygląd"
     },
     {
       "type": "checkbox",
@@ -694,75 +1077,28 @@ document.addEventListener('DOMContentLoaded', function() {
       "default": true
     },
     {
-      "type": "range",
-      "id": "products_limit",
-      "label": "Limit produktów",
-      "min": 50,
-      "max": 500,
-      "step": 50,
-      "default": 200
-    },
-    {
-      "type": "header",
-      "content": "📝 Teksty"
-    },
-    {
-      "type": "textarea",
-      "id": "message_before",
-      "label": "Komunikat przed progiem",
-      "default": "Dodaj produkty za [amount] aby otrzymać darmową próbkę!"
-    },
-    {
-      "type": "text",
-      "id": "choose_title",
-      "label": "Tytuł wyboru",
-      "default": "🎁 Wybierz produkt do próbki"
-    },
-    {
-      "type": "text",
-      "id": "search_placeholder",
-      "label": "Placeholder wyszukiwarki",
-      "default": "Szukaj produktu..."
-    },
-    {
-      "type": "text",
-      "id": "select_button_text",
-      "label": "Tekst przycisku",
-      "default": "Wybierz"
-    },
-    {
-      "type": "text",
-      "id": "add_button_text",
-      "label": "Tekst dodania",
-      "default": "Dodaj próbkę"
-    },
-    {
-      "type": "text",
-      "id": "success_title",
-      "label": "Tytuł sukcesu",
-      "default": "Próbka dodana!"
-    },
-    {
-      "type": "textarea",
-      "id": "success_message",
-      "label": "Komunikat sukcesu",
-      "default": "Twoja darmowa próbka zostanie dołączona do zamówienia."
-    },
-    {
-      "type": "header",
-      "content": "🎨 Kolory"
+      "type": "color",
+      "id": "background_color",
+      "label": "Kolor tła",
+      "default": "#ffffff"
     },
     {
       "type": "color",
-      "id": "section_bg_color",
-      "label": "Tło sekcji",
-      "default": "#ffffff"
+      "id": "border_color",
+      "label": "Kolor obramowania",
+      "default": "#e5e7eb"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Kolor nagłówka",
+      "default": "#1f2937"
     },
     {
       "type": "color",
       "id": "text_color",
       "label": "Kolor tekstu",
-      "default": "#1f2937"
+      "default": "#4b5563"
     },
     {
       "type": "color",
@@ -772,134 +1108,23 @@ document.addEventListener('DOMContentLoaded', function() {
     },
     {
       "type": "color",
-      "id": "button_bg_color",
-      "label": "Tło przycisku",
+      "id": "button_color",
+      "label": "Kolor przycisku",
       "default": "#1f2937"
     },
     {
       "type": "color",
       "id": "button_text_color",
-      "label": "Tekst przycisku",
+      "label": "Kolor tekstu przycisku",
       "default": "#ffffff"
-    },
-    {
-      "type": "color",
-      "id": "button_hover_color",
-      "label": "Hover przycisku",
-      "default": "#374151"
-    },
-    {
-      "type": "color",
-      "id": "card_border_color",
-      "label": "Obramowanie karty",
-      "default": "#e5e7eb"
-    },
-    {
-      "type": "color",
-      "id": "card_selected_color",
-      "label": "Karta wybrana",
-      "default": "#10b981"
-    },
-    {
-      "type": "header",
-      "content": "📐 Rozmiary"
-    },
-    {
-      "type": "range",
-      "id": "section_padding",
-      "label": "Padding",
-      "min": 10,
-      "max": 60,
-      "step": 5,
-      "default": 30,
-      "unit": "px"
-    },
-    {
-      "type": "range",
-      "id": "section_radius",
-      "label": "Zaokrąglenie",
-      "min": 0,
-      "max": 30,
-      "step": 2,
-      "default": 12,
-      "unit": "px"
-    },
-    {
-      "type": "range",
-      "id": "progress_height",
-      "label": "Wysokość paska",
-      "min": 8,
-      "max": 30,
-      "step": 2,
-      "default": 12,
-      "unit": "px"
-    },
-    {
-      "type": "range",
-      "id": "message_font_size",
-      "label": "Rozmiar tekstu",
-      "min": 14,
-      "max": 24,
-      "step": 1,
-      "default": 18,
-      "unit": "px"
-    },
-    {
-      "type": "range",
-      "id": "title_font_size",
-      "label": "Rozmiar tytułu",
-      "min": 18,
-      "max": 32,
-      "step": 2,
-      "default": 28,
-      "unit": "px"
-    },
-    {
-      "type": "select",
-      "id": "text_align",
-      "label": "Wyrównanie",
-      "options": [
-        {"value": "left", "label": "Lewo"},
-        {"value": "center", "label": "Środek"},
-        {"value": "right", "label": "Prawo"}
-      ],
-      "default": "center"
-    },
-    {
-      "type": "range",
-      "id": "grid_columns",
-      "label": "Kolumny",
-      "min": 3,
-      "max": 6,
-      "step": 1,
-      "default": 5
-    },
-    {
-      "type": "range",
-      "id": "product_image_height",
-      "label": "Wysokość obrazka",
-      "min": 80,
-      "max": 200,
-      "step": 10,
-      "default": 120,
-      "unit": "px"
-    },
-    {
-      "type": "range",
-      "id": "grid_max_height",
-      "label": "Max wysokość",
-      "min": 300,
-      "max": 600,
-      "step": 50,
-      "default": 450,
-      "unit": "px"
     }
   ],
   "presets": [
     {
-      "name": "Gift Threshold"
+      "name": "Darmowy Prezent - Próg",
+      "category": "Promocje"
     }
   ],
-  "templates": ["cart"]
+  "templates": ["cart", "product", "collection", "index"]
 }
 {% endschema %}
