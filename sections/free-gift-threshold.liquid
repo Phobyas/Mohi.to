@@ -412,12 +412,6 @@
     opacity: 0.9;
   }
   
-  /* Loading state */
-  .gift-threshold-loading {
-    pointer-events: none;
-    opacity: 0.6;
-  }
-  
   /* Notification */
   .gift-notification {
     position: fixed;
@@ -590,6 +584,15 @@
       try {
         const response = await fetch(window.Shopify.routes.root + 'cart.js');
         this.cartData = await response.json();
+        
+        // Store globally for quantity protection
+        window.cartData = this.cartData;
+        
+        // Protect quantities after cart fetch
+        setTimeout(() => {
+          window.protectGiftQuantities && window.protectGiftQuantities();
+        }, 100);
+        
         return this.cartData;
       } catch (error) {
         console.error('Error fetching cart:', error);
@@ -757,6 +760,24 @@
     async addGiftToCart() {
       if (this.isProcessing || !this.selectedGift) return;
       
+      // Security check - verify threshold is met
+      await this.fetchCart();
+      if (this.cartData.total_price < this.threshold) {
+        this.showNotification('Koszyk nie spełnia wymaganego progu', 'error');
+        this.updateUI();
+        return;
+      }
+      
+      // Check if gift already exists
+      const existingGift = this.cartData.items.find(item => 
+        item.properties && item.properties._is_free_gift === 'true'
+      );
+      
+      if (existingGift) {
+        this.showNotification('Prezent jest już w koszyku', 'warning');
+        return;
+      }
+      
       const button = this.section.querySelector('.gift-add-btn');
       if (!button) return;
       
@@ -771,7 +792,8 @@
             quantity: 1,
             properties: {
               '_is_free_gift': 'true',
-              '_original_price': this.selectedGift.price
+              '_original_price': this.selectedGift.price,
+              '_threshold_required': this.threshold.toString()
             }
           }]
         };
@@ -976,6 +998,40 @@
       notification.addEventListener('click', () => notification.remove());
     }
   }
+  
+  // Simple function to disable quantity controls for gift items
+  window.protectGiftQuantities = function() {
+    fetch(window.Shopify.routes.root + 'cart.js')
+      .then(response => response.json())
+      .then(cart => {
+        cart.items.forEach((item, index) => {
+          if (item.properties && item.properties._is_free_gift === 'true') {
+            // Find quantity input by variant ID or index
+            let input = document.querySelector(`input[data-quantity-variant-id="${item.variant_id}"]`) ||
+                       document.querySelector(`#Quantity-${index + 1}`);
+            
+            if (input) {
+              // Disable input
+              input.disabled = true;
+              input.readOnly = true;
+              input.value = 1;
+              
+              // Disable buttons in the same container
+              const container = input.closest('quantity-input');
+              if (container) {
+                container.querySelectorAll('button').forEach(btn => {
+                  btn.disabled = true;
+                });
+              }
+            }
+          }
+        });
+      });
+  };
+  
+  // Run on load and after updates
+  document.addEventListener('DOMContentLoaded', window.protectGiftQuantities);
+  setInterval(window.protectGiftQuantities, 1000);
   
   // Initialize when DOM is ready
   function initGiftThreshold() {
