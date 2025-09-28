@@ -42,32 +42,97 @@
     "free_gift_threshold_eFJfPy": {
       "type": "free-gift-threshold",
       "blocks": {
+        "gift_product_wPwpXX": {
+          "type": "gift_product",
+          "settings": {
+            "product": "labubu-macarons-latte-copy",
+            "custom_title": "",
+            "description": "",
+            "featured": false,
+            "limit_variants": false,
+            "allowed_variants": "",
+            "priority": 50
+          }
+        },
+        "gift_product_h7tbCR": {
+          "type": "gift_product",
+          "settings": {
+            "product": "labubu-macarons-brazowy-copy",
+            "custom_title": "",
+            "description": "",
+            "featured": false,
+            "limit_variants": false,
+            "allowed_variants": "",
+            "priority": 50
+          }
+        },
         "gift_product_GRCRYp": {
           "type": "gift_product",
           "settings": {
-            "product": "labubu-have-a-seat-sisi-copy"
+            "product": "labubu-have-a-seat-sisi-copy",
+            "custom_title": "",
+            "description": "",
+            "featured": false,
+            "limit_variants": false,
+            "allowed_variants": "",
+            "priority": 50
           }
         }
       },
       "block_order": [
+        "gift_product_wPwpXX",
+        "gift_product_h7tbCR",
         "gift_product_GRCRYp"
       ],
       "name": "Darmowy Prezent - Próg",
       "settings": {
         "threshold": 2500,
+        "enabled": true,
+        "show_on_cart_page_only": false,
         "title": "Darmowy prezent",
         "progress_message": "Dodaj produkty za [amount] aby otrzymać darmowy prezent!",
         "threshold_message": "🎉 Gratulacje! Wybierz swój darmowy prezent:",
         "success_message": "Prezent został dodany do koszyka!",
         "add_button_text": "Dodaj darmowy prezent",
+        "empty_cart_message": "Your cart is empty. Add products to receive a free gift!",
+        "color_scheme": "",
+        "section_width": "page-width",
+        "border_radius": 8,
+        "section_padding_top": 36,
+        "section_padding_bottom": 36,
         "show_progress_bar": true,
-        "background_color": "#ffffff",
-        "border_color": "#e5e7eb",
-        "heading_color": "#1f2937",
-        "text_color": "#4b5563",
-        "accent_color": "#dc2626",
-        "button_color": "#1f2937",
-        "button_text_color": "#ffffff"
+        "progress_bar_color": "#10b981",
+        "progress_bar_background": "#f3f4f6",
+        "progress_bar_height": 12,
+        "show_progress_percentage": true,
+        "show_progress_amounts": true,
+        "animate_progress_bar": true,
+        "gift_layout": "grid",
+        "gifts_per_row_desktop": 4,
+        "gifts_per_row_tablet": 2,
+        "gifts_per_row_mobile": 1,
+        "show_gift_images": true,
+        "show_gift_titles": true,
+        "show_variant_count": true,
+        "gift_image_aspect_ratio": 100,
+        "max_gifts_displayed": 5,
+        "show_notifications": true,
+        "notification_position": "top-right",
+        "notification_duration": 3000,
+        "auto_remove_gifts": true,
+        "prevent_multiple_gifts": true,
+        "show_loading_states": true,
+        "enable_analytics": false,
+        "custom_css_class": "",
+        "mobile_optimized": true,
+        "mobile_stack_vertically": true,
+        "mobile_padding": 16,
+        "show_for_logged_in_only": false,
+        "show_for_new_customers_only": false,
+        "excluded_countries": "",
+        "update_debounce_time": 100,
+        "debug_mode": false,
+        "gift_product_tag": "free-gift"
       }
     }
   },
