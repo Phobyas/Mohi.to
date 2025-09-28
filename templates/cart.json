@@ -108,7 +108,7 @@
         "show_progress_amounts": true,
         "animate_progress_bar": true,
         "gift_layout": "grid",
-        "gifts_per_row_desktop": 4,
+        "gifts_per_row_desktop": 3,
         "gifts_per_row_tablet": 2,
         "gifts_per_row_mobile": 1,
         "show_gift_images": true,
