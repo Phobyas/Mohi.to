@@ -78,7 +78,7 @@
         "enabled": true,
         "title": "Free Gift",
         "progress_message": "Add product for [amount] to get a free gift!",
-        "threshold_message": "🎉 Ćongratulations! Pick your free gift!",
+        "threshold_message": "🎉 Congratulations! Pick your free gift!",
         "success_message": "Gift has been added to cart!",
         "add_button_text": "Add Free Gift",
         "empty_cart_message": "Your cart is empty. Add products to receive a free gift!",
