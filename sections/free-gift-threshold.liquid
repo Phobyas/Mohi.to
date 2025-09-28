@@ -618,6 +618,30 @@
     margin: 0;
     padding: 0;
     list-style: none;
+    display: flex !important;
+    flex-direction: row;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .gift-products-grid .grid__item {
+    flex: 0 0 auto;
+    max-width: 25rem;
+    width: 100%;
+  }
+  
+  @media screen and (min-width: 550px) {
+    .gift-products-grid .grid__item {
+      width: calc(50% - 0.75rem);
+    }
+  }
+  
+  @media screen and (min-width: 990px) {
+    .gift-products-grid .grid__item {
+      width: calc(25% - 1.125rem);
+      max-width: 20rem;
+    }
   }
   
   /* Product Cards */

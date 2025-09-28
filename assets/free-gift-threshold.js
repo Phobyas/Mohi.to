@@ -1,5 +1,5 @@
 /**
- * Free Gift Threshold Manager - Optimized Version with Performance Improvements
+ * Free Gift Threshold Manager - Enhanced Version with Reliability Fixes
  * File: assets/free-gift-threshold.js
  */
 
@@ -36,6 +36,92 @@
     },
   };
 
+  // Transaction lock to prevent race conditions
+  const TransactionLock = {
+    locks: new Set(),
+
+    acquire(key) {
+      if (this.locks.has(key)) {
+        return false;
+      }
+      this.locks.add(key);
+      return true;
+    },
+
+    release(key) {
+      this.locks.delete(key);
+    },
+
+    isLocked(key) {
+      return this.locks.has(key);
+    },
+  };
+
+  // Enhanced logging utility
+  const Logger = {
+    enabled:
+      window.location.hostname === "localhost" ||
+      window.location.search.includes("debug=gift"),
+
+    log(level, message, data = null) {
+      if (!this.enabled) return;
+
+      const timestamp = new Date().toISOString();
+      const logMessage = `[${timestamp}] [GIFT-${level.toUpperCase()}] ${message}`;
+
+      if (data) {
+        console[level](logMessage, data);
+      } else {
+        console[level](logMessage);
+      }
+    },
+
+    debug(message, data) {
+      this.log("debug", message, data);
+    },
+    info(message, data) {
+      this.log("info", message, data);
+    },
+    warn(message, data) {
+      this.log("warn", message, data);
+    },
+    error(message, data) {
+      this.log("error", message, data);
+    },
+  };
+
+  // Enhanced retry utility
+  const RetryHelper = {
+    async execute(fn, maxRetries = 3, delay = 500) {
+      let lastError;
+
+      for (let i = 0; i <= maxRetries; i++) {
+        try {
+          const result = await fn();
+          if (i > 0) {
+            Logger.info(`Operation succeeded after ${i} retries`);
+          }
+          return result;
+        } catch (error) {
+          lastError = error;
+          Logger.warn(`Attempt ${i + 1} failed:`, error.message);
+
+          if (i < maxRetries) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, delay * Math.pow(2, i))
+            );
+          }
+        }
+      }
+
+      Logger.error(
+        `Operation failed after ${maxRetries + 1} attempts:`,
+        lastError
+      );
+      throw lastError;
+    },
+  };
+
   class FreeGiftManager {
     constructor(section) {
       this.section = section;
@@ -49,17 +135,39 @@
       this.updateDebounceTime = 100; // Prevent excessive updates
       this.monitoringActive = false;
 
+      // Enhanced event listener tracking for cleanup
+      this.eventListeners = [];
+
       // Bind methods to preserve context
       this.handleSectionChange = this.handleSectionChange.bind(this);
       this.handleAddGift = this.handleAddGift.bind(this);
       this.handleCartUpdate = this.handleCartUpdate.bind(this);
       this.debouncedCartCheck = this.debouncedCartCheck.bind(this);
 
+      Logger.info(`Initializing FreeGiftManager for section ${this.sectionId}`);
       this.init();
+    }
+
+    addEventListenerTracked(element, event, handler, options = {}) {
+      element.addEventListener(event, handler, options);
+      this.eventListeners.push({ element, event, handler, options });
+    }
+
+    removeAllEventListeners() {
+      this.eventListeners.forEach(({ element, event, handler, options }) => {
+        try {
+          element.removeEventListener(event, handler, options);
+        } catch (error) {
+          Logger.warn("Failed to remove event listener:", error);
+        }
+      });
+      this.eventListeners = [];
     }
 
     async init() {
       try {
+        Logger.debug("Starting initialization");
+
         // Get initial cart state
         await this.fetchCart();
 
@@ -73,25 +181,36 @@
 
         // Initial UI update
         this.updateUI();
+
+        Logger.info("Initialization completed successfully");
       } catch (error) {
-        // Silent fail
+        Logger.error("Initialization failed:", error);
       }
     }
 
     attachEventListeners() {
-      // Remove existing listeners to prevent duplicates
-      this.section.removeEventListener("change", this.handleSectionChange);
-      this.section.addEventListener("change", this.handleSectionChange);
+      // Clear existing listeners first
+      this.removeAllEventListeners();
 
-      // Add gift button
+      // Add section change listener
+      this.addEventListenerTracked(
+        this.section,
+        "change",
+        this.handleSectionChange
+      );
+
+      // Add gift button listener
       const addBtn = this.section.querySelector(".gift-add-btn");
       if (addBtn) {
-        addBtn.removeEventListener("click", this.handleAddGift);
-        addBtn.addEventListener("click", this.handleAddGift);
+        this.addEventListenerTracked(addBtn, "click", this.handleAddGift);
       }
+
+      Logger.debug("Event listeners attached");
     }
 
     handleSectionChange(e) {
+      Logger.debug("Section change detected:", e.target.className);
+
       if (e.target.classList.contains("gift-radio")) {
         this.selectProductByRadio(e.target);
       } else if (e.target.classList.contains("gift-variant-select")) {
@@ -100,12 +219,15 @@
     }
 
     handleAddGift() {
+      Logger.debug("Add gift button clicked");
       this.addGiftToCart();
     }
 
     selectProductByRadio(radio) {
       const productCard = radio.closest(".gift-product-card");
       const productId = productCard.dataset.productId;
+
+      Logger.debug(`Product selected: ${productId}`);
 
       // Hide all variant selections first
       this.section
@@ -154,10 +276,12 @@
           image: productImage,
         };
 
+        Logger.debug("Gift selected from data attributes:", this.selectedGift);
         this.showSelectedGift();
       } else {
-        // Fallback to API call
-        this.getProductVariants(productId)
+        // Fallback to API call with retry
+        Logger.debug("Fetching product variants from API");
+        RetryHelper.execute(() => this.getProductVariants(productId))
           .then((product) => {
             if (product?.variants?.length > 0) {
               const firstVariant = product.variants[0];
@@ -167,28 +291,28 @@
                 price: firstVariant.price,
                 image: productImage,
               };
+              Logger.debug("Gift selected from API:", this.selectedGift);
               this.showSelectedGift();
             }
           })
           .catch((error) => {
-            // Silent fail
+            Logger.error("Failed to fetch product variants:", error);
           });
       }
     }
 
     async getProductVariants(productId) {
-      try {
-        const response = await fetch(`/products/${productId}.js`);
-        if (!response.ok) throw new Error("Failed to fetch product");
-        return await response.json();
-      } catch (error) {
-        return null;
-      }
+      const response = await fetch(`/products/${productId}.js`);
+      if (!response.ok)
+        throw new Error(`Failed to fetch product: ${response.status}`);
+      return await response.json();
     }
 
     startMonitoring() {
       if (this.monitoringActive) return;
       this.monitoringActive = true;
+
+      Logger.debug("Starting cart monitoring");
 
       // Listen to Dawn theme cart events if available
       if (
@@ -204,33 +328,38 @@
 
     attachCartListeners() {
       // Listen to cart form submissions
-      document.addEventListener("submit", (e) => {
+      this.addEventListenerTracked(document, "submit", (e) => {
         if (e.target.matches('form[action*="/cart"]')) {
+          Logger.debug("Cart form submitted");
           setTimeout(() => this.debouncedUpdate(), 500);
         }
       });
 
       // Listen to quantity changes
-      document.addEventListener("change", (e) => {
+      this.addEventListenerTracked(document, "change", (e) => {
         if (e.target.matches('.quantity__input, input[name="updates[]"]')) {
+          Logger.debug("Quantity changed");
           setTimeout(() => this.debouncedUpdate(), 300);
         }
       });
 
       // Listen to remove button clicks
-      document.addEventListener("click", (e) => {
+      this.addEventListenerTracked(document, "click", (e) => {
         if (e.target.closest("cart-remove-button, .cart-remove")) {
+          Logger.debug("Remove button clicked");
           setTimeout(() => this.debouncedUpdate(), 500);
         }
       });
 
       // Listen to cart drawer events
-      document.addEventListener("cart:update", () => {
+      this.addEventListenerTracked(document, "cart:update", () => {
+        Logger.debug("Cart update event received");
         this.debouncedUpdate();
       });
 
       // Listen to add to cart events
-      document.addEventListener("cart:add", () => {
+      this.addEventListenerTracked(document, "cart:add", () => {
+        Logger.debug("Cart add event received");
         setTimeout(() => this.debouncedUpdate(), 300);
       });
     }
@@ -241,15 +370,18 @@
         event?.source === "free-gift-add" ||
         event?.source === "free-gift-remove"
       ) {
+        Logger.debug("Skipping self-triggered cart update");
         return;
       }
 
+      Logger.debug("Handling external cart update");
       await this.debouncedUpdate();
     }
 
     async debouncedUpdate() {
       const now = Date.now();
       if (now - this.lastUpdateTime < this.updateDebounceTime) {
+        Logger.debug("Update debounced - too recent");
         return; // Skip if updated too recently
       }
       this.lastUpdateTime = now;
@@ -258,7 +390,7 @@
         await this.fetchCart();
         this.updateUI();
       } catch (error) {
-        // Silent fail
+        Logger.error("Debounced update failed:", error);
       }
     }
 
@@ -270,25 +402,28 @@
         if (currentCart.total_price !== this.lastCartTotal) {
           this.lastCartTotal = currentCart.total_price;
           this.cartData = currentCart;
+          Logger.debug("Cart total changed, updating UI");
           this.updateUI();
         }
       } catch (error) {
-        // Silent fail for polling
+        Logger.warn("Cart polling failed:", error);
       }
     }
 
     async fetchCart() {
-      try {
-        const response = await fetch(window.Shopify.routes.root + "cart.js");
-        if (!response.ok) throw new Error("Failed to fetch cart");
+      const response = await fetch(window.Shopify.routes.root + "cart.js");
+      if (!response.ok)
+        throw new Error(`Failed to fetch cart: ${response.status}`);
 
-        this.cartData = await response.json();
-        this.lastCartTotal = this.cartData.total_price;
+      this.cartData = await response.json();
+      this.lastCartTotal = this.cartData.total_price;
 
-        return this.cartData;
-      } catch (error) {
-        return null;
-      }
+      Logger.debug("Cart fetched:", {
+        total: this.cartData.total_price,
+        items: this.cartData.items.length,
+      });
+
+      return this.cartData;
     }
 
     updateUI() {
@@ -300,15 +435,20 @@
         success: this.section.querySelector(".gift-state--success"),
       };
 
-      // Check for existing gift
-      const giftItem = this.cartData.items.find(
-        (item) => item.properties && item.properties._is_free_gift === "true"
-      );
+      // Consolidated gift detection
+      const giftItem = this.findGiftInCart();
       const hasGift = !!giftItem;
       const thresholdMet = this.cartData.total_price >= this.threshold;
 
+      Logger.debug("UI update:", {
+        hasGift,
+        thresholdMet,
+        threshold: this.threshold,
+      });
+
       // Check if gift needs to be removed (has gift but threshold not met)
       if (hasGift && !thresholdMet) {
+        Logger.info("Gift needs removal - threshold not met");
         this.removeGift();
         return;
       }
@@ -349,6 +489,16 @@
           this.updateProgress();
         }
       }
+    }
+
+    // Consolidated gift detection method
+    findGiftInCart() {
+      return this.cartData.items.find(
+        (item) =>
+          item.properties &&
+          (item.properties._is_free_gift === "true" ||
+            item.properties._is_free_sample === "true")
+      );
     }
 
     updateProgress() {
@@ -411,9 +561,7 @@
     }
 
     updateSuccessInfo() {
-      const giftItem = this.cartData.items.find(
-        (item) => item.properties && item.properties._is_free_gift === "true"
-      );
+      const giftItem = this.findGiftInCart();
 
       if (giftItem) {
         const infoEl = this.section.querySelector(".gift-selected-info-text");
@@ -467,6 +615,7 @@
         image: option.dataset.image,
       };
 
+      Logger.debug("Variant selected:", this.selectedGift);
       this.showSelectedGift();
     }
 
@@ -503,33 +652,39 @@
     async addGiftToCart() {
       if (this.isProcessing || !this.selectedGift) return;
 
-      // Security check - verify threshold is met
-      await this.fetchCart();
-      if (this.cartData.total_price < this.threshold) {
-        this.showNotification(
-          "Cart does not meet the required threshold",
-          "error"
-        );
-        this.updateUI();
+      const lockKey = "add-gift";
+      if (!TransactionLock.acquire(lockKey)) {
+        Logger.warn("Add gift operation already in progress");
         return;
       }
-
-      // Check if gift already exists
-      const existingGift = this.cartData.items.find(
-        (item) => item.properties && item.properties._is_free_gift === "true"
-      );
-
-      if (existingGift) {
-        this.showNotification("Gift is already in cart", "warning");
-        return;
-      }
-
-      const button = this.section.querySelector(".gift-add-btn");
-      if (!button) return;
-
-      this.setButtonLoading(button, true);
 
       try {
+        Logger.info("Starting add gift to cart operation");
+
+        // Security check - verify threshold is met
+        await this.fetchCart();
+        if (this.cartData.total_price < this.threshold) {
+          this.showNotification(
+            "Cart does not meet the required threshold",
+            "error"
+          );
+          this.updateUI();
+          return;
+        }
+
+        // Check if gift already exists
+        const existingGift = this.findGiftInCart();
+
+        if (existingGift) {
+          this.showNotification("Gift is already in cart", "warning");
+          return;
+        }
+
+        const button = this.section.querySelector(".gift-add-btn");
+        if (!button) return;
+
+        this.setButtonLoading(button, true);
+
         const formData = {
           items: [
             {
@@ -545,21 +700,26 @@
           ],
         };
 
-        const response = await fetch(
-          window.Shopify.routes.root + "cart/add.js",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData),
-          }
-        );
+        await RetryHelper.execute(async () => {
+          const response = await fetch(
+            window.Shopify.routes.root + "cart/add.js",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(formData),
+            }
+          );
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.description || "Error adding gift");
-        }
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.description || `HTTP ${response.status}`);
+          }
+
+          return response.json();
+        });
 
         this.showNotification("Gift has been added to cart!", "success");
+        Logger.info("Gift successfully added to cart");
 
         // Refresh cart data and update UI immediately
         await this.fetchCart();
@@ -573,9 +733,12 @@
           publish(PUB_SUB_EVENTS.cartUpdate, { source: "free-gift-add" });
         }
       } catch (error) {
+        Logger.error("Failed to add gift to cart:", error);
         this.showNotification("Cannot add gift: " + error.message, "error");
       } finally {
-        this.setButtonLoading(button, false);
+        const button = this.section.querySelector(".gift-add-btn");
+        if (button) this.setButtonLoading(button, false);
+        TransactionLock.release(lockKey);
       }
     }
 
@@ -584,45 +747,67 @@
       button.setAttribute("aria-busy", loading.toString());
       button.classList.toggle("loading", loading);
 
+      const span = button.querySelector("span");
       const spinner = button.querySelector(".loading-overlay__spinner");
-      if (spinner) {
-        spinner.classList.toggle("hidden", !loading);
+
+      if (loading) {
+        // Store original text and change to loading text
+        if (!button.dataset.originalText) {
+          button.dataset.originalText = span.textContent;
+        }
+        span.textContent = "Dodawanie...";
+        spinner?.classList.remove("hidden");
+      } else {
+        // Restore original text
+        if (button.dataset.originalText) {
+          span.textContent = button.dataset.originalText;
+        }
+        spinner?.classList.add("hidden");
       }
     }
 
     async removeGift() {
-      const giftItem = this.cartData.items.find(
-        (item) => item.properties && item.properties._is_free_gift === "true"
-      );
-
-      if (!giftItem) return;
-
-      this.section.classList.add("gift-threshold-loading");
+      const lockKey = "remove-gift";
+      if (!TransactionLock.acquire(lockKey)) {
+        Logger.warn("Remove gift operation already in progress");
+        return;
+      }
 
       try {
-        const response = await fetch(
-          window.Shopify.routes.root + "cart/change.js",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              id: giftItem.key,
-              quantity: 0,
-            }),
+        const giftItem = this.findGiftInCart();
+        if (!giftItem) return;
+
+        Logger.info("Removing gift from cart");
+        this.section.classList.add("gift-threshold-loading");
+
+        const updatedCart = await RetryHelper.execute(async () => {
+          const response = await fetch(
+            window.Shopify.routes.root + "cart/change.js",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                id: giftItem.key,
+                quantity: 0,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to remove gift: ${response.status}`);
           }
-        );
 
-        if (!response.ok) {
-          throw new Error("Failed to remove gift");
-        }
+          return response.json();
+        });
 
-        const updatedCart = await response.json();
         this.cartData = updatedCart;
         this.lastCartTotal = updatedCart.total_price;
 
         this.showNotification("Gift removed (cart below threshold)", "warning");
         this.updateCartUI(updatedCart);
         this.updateUI();
+
+        Logger.info("Gift successfully removed from cart");
 
         // Trigger cart update event
         if (
@@ -635,9 +820,11 @@
           });
         }
       } catch (error) {
+        Logger.error("Failed to remove gift:", error);
         this.showNotification("Error removing gift", "error");
       } finally {
         this.section.classList.remove("gift-threshold-loading");
+        TransactionLock.release(lockKey);
       }
     }
 
@@ -678,20 +865,33 @@
       }
     }
 
+    // Enhanced money formatting - always use Shopify's format
     formatMoney(cents) {
-      // Use Shopify's money format if available
-      if (window.Shopify?.formatMoney && window.theme?.moneyFormat) {
-        return window.Shopify.formatMoney(cents, window.theme.moneyFormat);
+      // Always try Shopify's money format first
+      if (window.Shopify?.formatMoney) {
+        // Use theme money format if available, fallback to Shopify default
+        const format =
+          window.theme?.moneyFormat ||
+          window.Shopify.money_format ||
+          "{{amount_with_comma_separator}} zł";
+        return window.Shopify.formatMoney(cents, format);
       }
 
-      // Fallback formatting
-      const amount = (cents / 100).toFixed(2);
-      const [whole, decimal] = amount.split(".");
-      const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-      return `${formattedWhole},${decimal} zł`;
+      // Enhanced fallback formatting
+      try {
+        const amount = (cents / 100).toFixed(2);
+        const [whole, decimal] = amount.split(".");
+        const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        return `${formattedWhole},${decimal} zł`;
+      } catch (error) {
+        Logger.error("Money formatting failed:", error);
+        return `${(cents / 100).toFixed(2)} zł`;
+      }
     }
 
     showNotification(message, type = "info") {
+      Logger.info(`Showing notification: ${type} - ${message}`);
+
       // Remove existing notifications
       document
         .querySelectorAll(".gift-notification")
@@ -718,31 +918,54 @@
       });
     }
 
-    // Cleanup method
+    // Enhanced cleanup method
     destroy() {
+      Logger.info(`Destroying FreeGiftManager for section ${this.sectionId}`);
+
       this.monitoringActive = false;
-      this.section.removeEventListener("change", this.handleSectionChange);
-      const addBtn = this.section.querySelector(".gift-add-btn");
-      if (addBtn) {
-        addBtn.removeEventListener("click", this.handleAddGift);
-      }
+      this.removeAllEventListeners();
+
+      // Clear any pending operations
+      this.isProcessing = false;
+
+      // Release any held locks
+      TransactionLock.release("add-gift");
+      TransactionLock.release("remove-gift");
     }
   }
 
-  // Optimized Cart Protection Manager - Event-driven
+  // Optimized Cart Protection Manager - Event-driven with enhanced gift detection
   class CartGiftProtection {
     constructor() {
       this.isActive = false;
       this.cachedCart = null;
       this.lastProtectionRun = 0;
       this.protectionDebounce = 500; // Reduce frequency
+      this.eventListeners = [];
 
       this.init();
+    }
+
+    addEventListenerTracked(element, event, handler, options = {}) {
+      element.addEventListener(event, handler, options);
+      this.eventListeners.push({ element, event, handler, options });
+    }
+
+    removeAllEventListeners() {
+      this.eventListeners.forEach(({ element, event, handler, options }) => {
+        try {
+          element.removeEventListener(event, handler, options);
+        } catch (error) {
+          Logger.warn("Failed to remove protection event listener:", error);
+        }
+      });
+      this.eventListeners = [];
     }
 
     init() {
       // Only initialize if we're on a cart-related page
       if (this.shouldActivate()) {
+        Logger.debug("Activating cart gift protection");
         this.startProtection();
       }
     }
@@ -768,14 +991,14 @@
 
     attachProtectionListeners() {
       // Listen to quantity changes
-      document.addEventListener("change", (e) => {
+      this.addEventListenerTracked(document, "change", (e) => {
         if (e.target.matches(".quantity__input")) {
           setTimeout(() => this.protectGiftQuantities(), 200);
         }
       });
 
       // Listen to cart updates
-      document.addEventListener("cart:update", () => {
+      this.addEventListenerTracked(document, "cart:update", () => {
         setTimeout(() => this.protectGiftQuantities(), 200);
       });
 
@@ -788,6 +1011,28 @@
           setTimeout(() => this.protectGiftQuantities(), 200);
         });
       }
+    }
+
+    // Consolidated gift detection method
+    isGiftItem(item, cartRow = null) {
+      // Primary detection: cart data properties
+      if (item && item.properties) {
+        return (
+          item.properties._is_free_gift === "true" ||
+          item.properties._is_free_sample === "true"
+        );
+      }
+
+      // Secondary detection: DOM attributes (if cart data not available)
+      if (cartRow) {
+        return (
+          cartRow.dataset.isGift === "true" ||
+          cartRow.dataset.isSample === "true" ||
+          cartRow.querySelector(".gift-item-disabled")
+        );
+      }
+
+      return false;
     }
 
     async protectGiftQuantities() {
@@ -809,15 +1054,18 @@
         }
         this.cachedCart = cart;
 
+        Logger.debug(
+          "Protecting gift quantities for",
+          cart.items.length,
+          "items"
+        );
+
         // Reset all quantity controls first
         document.querySelectorAll(".quantity__input").forEach((input) => {
           const row = input.closest(".cart-item");
-          const isGift =
-            row?.dataset.isGift === "true" ||
-            row?.dataset.isSample === "true" ||
-            row?.querySelector(".gift-item-disabled");
 
-          if (!isGift) {
+          // Use consolidated detection method
+          if (!this.isGiftItem(null, row)) {
             input.disabled = false;
             input.readOnly = false;
 
@@ -832,9 +1080,9 @@
           }
         });
 
-        // Only disable gift items
+        // Only disable gift items using cart data
         cart.items.forEach((item, index) => {
-          if (item.properties && item.properties._is_free_gift === "true") {
+          if (this.isGiftItem(item)) {
             const input =
               document.querySelector(
                 `input[data-quantity-variant-id="${item.variant_id}"]`
@@ -853,16 +1101,20 @@
                   btn.style.cursor = "not-allowed";
                 });
               }
+
+              Logger.debug("Protected gift item quantity:", item.product_title);
             }
           }
         });
       } catch (error) {
-        // Silent fail
+        Logger.warn("Gift protection failed:", error);
       }
     }
 
     destroy() {
+      Logger.debug("Destroying cart gift protection");
       this.isActive = false;
+      this.removeAllEventListeners();
     }
   }
 
@@ -880,6 +1132,8 @@
 
   // Initialize gift managers
   function initGiftThreshold() {
+    Logger.info("Initializing gift threshold system");
+
     document.querySelectorAll(".free-gift-threshold").forEach((section) => {
       if (section.giftManager) {
         section.giftManager.destroy(); // Clean up existing
@@ -904,6 +1158,7 @@
   document.addEventListener("shopify:section:load", (event) => {
     const section = event.target.querySelector(".free-gift-threshold");
     if (section) {
+      Logger.info("Section loaded, reinitializing gift manager");
       if (section.giftManager) {
         section.giftManager.destroy();
       }
@@ -920,6 +1175,8 @@
 
   // Cleanup on page unload
   window.addEventListener("beforeunload", () => {
+    Logger.info("Page unloading, cleaning up gift managers");
+
     if (cartProtection) {
       cartProtection.destroy();
     }
