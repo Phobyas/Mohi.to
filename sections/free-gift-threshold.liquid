@@ -3,26 +3,22 @@
   File: sections/free-gift-threshold.liquid
 {% endcomment %}
 
-<!-- Add theme money format for JS -->
 <script>
   window.theme = window.theme || {};
   window.theme.moneyFormat = {{ shop.money_format | json }};
 </script>
 
 {%- liquid
-  # Get settings
   assign threshold_amount = section.settings.threshold | times: 100
   assign cart_total = cart.total_price
   assign remaining = threshold_amount | minus: cart_total
   
-  # Check if threshold is met
   if cart_total >= threshold_amount
     assign threshold_met = true
   else
     assign threshold_met = false
   endif
   
-  # Calculate progress
   assign progress_percentage = 0
   if cart_total > 0 and threshold_amount > 0
     assign progress_percentage = cart_total | times: 100.0 | divided_by: threshold_amount
@@ -31,7 +27,6 @@
     endif
   endif
   
-  # Check if any gift is already in cart
   assign has_gift = false
   assign selected_gift_info = ''
   
@@ -52,7 +47,6 @@
      data-section-id="{{ section.id }}">
 
   <div class="gift-container color-{{ section.settings.color_scheme }} gradient">
-    <!-- Progress State -->
     <div class="gift-state gift-state--progress" data-state="progress" style="{% if has_gift or threshold_met %}display: none;{% endif %}">
       <div class="gift-header">
         <svg class="icon icon-gift" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -100,7 +94,6 @@
       {%- endif -%}
     </div>
 
-    <!-- Selector State -->
     <div class="gift-state gift-state--selector" data-state="selector" style="{% if threshold_met and has_gift == false %}display: block;{% else %}display: none;{% endif %}">
       <div class="gift-header gift-header--success">
         <svg class="icon icon-star" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -110,10 +103,9 @@
       </div>
       
       <div class="gift-message gift-message--success">
-        {{ section.settings.threshold_message | replace: 'ðŸŽ‰', '' }}
+        {{ section.settings.threshold_message | replace: 'Ã°Å¸Å½â€°', '' }}
       </div>
       
-      <!-- Selected Product Display - MOVED TO BE MORE VISIBLE -->
       <div class="gift-selected" id="gift-selected-{{ section.id }}" style="display: none;">
         <div class="gift-selected-card">
           <div class="gift-selected-header">
@@ -141,7 +133,6 @@
         </div>
       </div>
       
-      <!-- Gift Products Grid -->
       <div class="gift-products-wrapper">
         <div class="gift-selection-header">
           <h4 class="gift-selection-title">{{ 'sections.free_gift.choose_one_gift' | t }}</h4>
@@ -249,7 +240,6 @@
       </div>
     </div>
 
-    <!-- Success State -->
     <div class="gift-state gift-state--success" data-state="success" style="{% if has_gift %}display: block;{% else %}display: none;{% endif %}visibility: hidden;">
       <div class="gift-header gift-header--complete">
         <svg class="icon icon-checkmark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -272,7 +262,6 @@
 </div>
 
 <style>
-  /* Main container */
   .free-gift-threshold {
     margin-bottom: 5rem;
   }
@@ -290,7 +279,6 @@
     }
   }
   
-  /* Header styling */
   .gift-header {
     display: flex;
     align-items: center;
@@ -318,7 +306,6 @@
     color: rgb(var(--color-foreground));
   }
   
-  /* Messages */
   .gift-message {
     font-size: 1.5rem;
     line-height: calc(1 + 0.8 / var(--font-body-scale));
@@ -337,7 +324,6 @@
     font-size: 1.6rem;
   }
   
-  /* Fixed Progress Bar Styles */
   .gift-progress {
     margin-top: 2rem;
   }
@@ -416,13 +402,11 @@
     color: rgb(16, 185, 129);
   }
 
-  /* Force progress bar visibility */
   .gift-progress-fill[style*="width"] {
     background-color: rgb(16, 185, 129) !important;
     min-height: 1.2rem !important;
   }
   
-  /* Gift Selection Header */
   .gift-selection-header {
     margin-bottom: 2rem;
     text-align: center;
@@ -446,7 +430,92 @@
     color: rgba(var(--color-foreground), 0.55);
   }
   
-  /* Radio Button Product Cards - FIXED */
+  .gift-products-wrapper {
+    background: rgba(var(--color-foreground), 0.03);
+    border-radius: var(--inputs-radius);
+    padding: 5rem 3rem 3rem 3rem;
+    margin-bottom: 2rem;
+    max-height: 55rem;
+    overflow: visible;
+  }
+  
+  .gift-products-wrapper::-webkit-scrollbar {
+    width: 0.4rem;
+  }
+  
+  .gift-products-wrapper::-webkit-scrollbar-track {
+    background: rgba(var(--color-foreground), 0.05);
+  }
+  
+  .gift-products-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-foreground), 0.15);
+    border-radius: 0.2rem;
+  }
+  
+  .gift-products-grid {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex !important;
+    flex-direction: row;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    overflow: visible;
+    padding: 2.5rem 2rem 2rem 2rem;
+  }
+  
+  .gift-products-grid .grid__item {
+    flex: 0 0 auto;
+    max-width: 25rem;
+    width: 100%;
+    overflow: visible !important;
+    margin: 1.5rem 1rem 1rem 1rem;
+    position: relative;
+  }
+  
+  @media screen and (min-width: 550px) {
+    .gift-products-grid .grid__item {
+      width: calc(50% - 0.75rem);
+    }
+  }
+  
+  @media screen and (min-width: 990px) {
+    .gift-products-grid .grid__item {
+      width: calc(25% - 1.125rem);
+      max-width: 20rem;
+    }
+  }
+  
+  .gift-product-card {
+    position: relative;
+    height: 100%;
+    overflow: visible !important;
+  }
+  
+  .gift-card-inner {
+    background: rgb(var(--color-background));
+    border: 0.1rem solid rgba(var(--color-foreground), 0.08);
+    border-radius: var(--inputs-radius);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--duration-short) ease, 
+                box-shadow var(--duration-short) ease;
+    cursor: pointer;
+  }
+  
+  .gift-product-card:hover .gift-card-inner {
+    transform: translateY(-0.2rem);
+    box-shadow: 0 0.2rem 1rem rgba(var(--color-shadow), 0.1);
+  }
+  
+  .gift-product-card.selected .gift-card-inner {
+    border-color: rgb(16, 185, 129);
+    background: rgba(16, 185, 129, 0.04);
+  }
+  
   .gift-card-selection {
     position: relative;
     height: 100%;
@@ -471,19 +540,28 @@
     border-radius: var(--inputs-radius);
     background: rgb(var(--color-background));
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease, z-index 0s;
     position: relative;
+    z-index: 1;
   }
   
   .gift-card-label:hover {
-    transform: translateY(-0.2rem);
     box-shadow: 0 0.4rem 1.5rem rgba(var(--color-shadow), 0.15);
     border-color: rgba(var(--color-foreground), 0.15);
+    z-index: 10;
   }
   
   .gift-radio:checked + .gift-card-label {
     border-color: rgb(16, 185, 129);
     background: rgba(16, 185, 129, 0.04);
+    box-shadow: 0 0 0 1px rgb(16, 185, 129);
+    z-index: 5;
+  }
+  
+  .gift-radio:checked + .gift-card-label:hover {
+    z-index: 15;
+    box-shadow: 0 0.4rem 1.5rem rgba(16, 185, 129, 0.2), 
+                0 0 0 1px rgb(16, 185, 129);
   }
   
   .gift-radio:checked + .gift-card-label .gift-card-check {
@@ -491,7 +569,6 @@
     transform: scale(1);
   }
   
-  /* Visual radio button indicator */
   .gift-card-label::before {
     content: '';
     position: absolute;
@@ -523,7 +600,6 @@
     z-index: 6;
   }
   
-  /* Card Check Icon */
   .gift-card-check {
     position: absolute;
     top: 1rem;
@@ -547,133 +623,6 @@
     color: white;
   }
   
-  /* Variant Info */
-  .gift-variant-info {
-    margin-top: 0.5rem;
-    padding: 0.5rem;
-    background: rgba(var(--color-foreground), 0.05);
-    border-radius: 0.3rem;
-  }
-  
-  .variant-count {
-    font-size: 1.2rem;
-    color: rgba(var(--color-foreground), 0.65);
-    font-style: italic;
-  }
-  
-  /* Variant Selection Panel */
-  .gift-variant-selection {
-    padding: 1.5rem;
-    border-top: 0.1rem solid rgba(var(--color-foreground), 0.08);
-    background: rgba(var(--color-foreground), 0.02);
-    animation: slideDown 0.3s ease;
-  }
-  
-  /* Override product card styles for radio version */
-  .gift-card-selection .gift-card-inner {
-    background: transparent;
-    border: none;
-    overflow: visible;
-    transition: none;
-    transform: none;
-    box-shadow: none;
-    cursor: default;
-  }
-  
-  .gift-card-selection .gift-card-inner:hover {
-    transform: none;
-    box-shadow: none;
-  }
-  
-  .gift-card-selection .gift-card-content {
-    padding: 1.5rem;
-  }
-  
-  .gift-card-selection .gift-card-media {
-    background: rgba(var(--color-foreground), 0.04);
-  }
-  .gift-products-wrapper {
-    background: rgba(var(--color-foreground), 0.03);
-    border-radius: var(--inputs-radius);
-    padding: 2rem;
-    margin-bottom: 2rem;
-    max-height: 50rem;
-    overflow-y: auto;
-  }
-  
-  .gift-products-wrapper::-webkit-scrollbar {
-    width: 0.4rem;
-  }
-  
-  .gift-products-wrapper::-webkit-scrollbar-track {
-    background: rgba(var(--color-foreground), 0.05);
-  }
-  
-  .gift-products-wrapper::-webkit-scrollbar-thumb {
-    background: rgba(var(--color-foreground), 0.15);
-    border-radius: 0.2rem;
-  }
-  
-  .gift-products-grid {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex !important;
-    flex-direction: row;
-    justify-content: center;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-  }
-  
-  .gift-products-grid .grid__item {
-    flex: 0 0 auto;
-    max-width: 25rem;
-    width: 100%;
-  }
-  
-  @media screen and (min-width: 550px) {
-    .gift-products-grid .grid__item {
-      width: calc(50% - 0.75rem);
-    }
-  }
-  
-  @media screen and (min-width: 990px) {
-    .gift-products-grid .grid__item {
-      width: calc(25% - 1.125rem);
-      max-width: 20rem;
-    }
-  }
-  
-  /* Product Cards */
-  .gift-product-card {
-    position: relative;
-    height: 100%;
-  }
-  
-  .gift-card-inner {
-    background: rgb(var(--color-background));
-    border: 0.1rem solid rgba(var(--color-foreground), 0.08);
-    border-radius: var(--inputs-radius);
-    overflow: hidden;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    transition: transform var(--duration-short) ease, 
-                box-shadow var(--duration-short) ease;
-    cursor: pointer;
-  }
-  
-  .gift-product-card:hover .gift-card-inner {
-    transform: translateY(-0.2rem);
-    box-shadow: 0 0.2rem 1rem rgba(var(--color-shadow), 0.1);
-  }
-  
-  .gift-product-card.selected .gift-card-inner {
-    border-color: rgb(16, 185, 129);
-    background: rgba(16, 185, 129, 0.04);
-  }
-  
-  /* Card Media - Square */
   .gift-card-media {
     position: relative;
     padding-bottom: 100%;
@@ -701,7 +650,6 @@
     object-fit: contain;
   }
   
-  /* Card Content */
   .gift-card-content {
     padding: 1.5rem;
     display: flex;
@@ -717,7 +665,51 @@
     color: rgb(var(--color-foreground));
   }
   
-  /* Select and Actions */
+  .gift-variant-info {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(var(--color-foreground), 0.05);
+    border-radius: 0.3rem;
+  }
+  
+  .variant-count {
+    font-size: 1.2rem;
+    color: rgba(var(--color-foreground), 0.65);
+    font-style: italic;
+  }
+  
+  .gift-variant-selection {
+    padding: 1.5rem;
+    border-top: 0.1rem solid rgba(var(--color-foreground), 0.08);
+    background: rgba(var(--color-foreground), 0.02);
+    animation: slideDown 0.3s ease;
+  }
+  
+  .gift-card-selection .gift-card-inner {
+    background: transparent;
+    border: none;
+    overflow: visible !important;
+    transition: none;
+    transform: none;
+    box-shadow: none;
+    cursor: default;
+    position: static;
+  }
+  
+  .gift-card-selection .gift-card-inner:hover {
+    transform: none;
+    box-shadow: none;
+    overflow: visible !important;
+  }
+  
+  .gift-card-selection .gift-card-content {
+    padding: 1.5rem;
+  }
+  
+  .gift-card-selection .gift-card-media {
+    background: rgba(var(--color-foreground), 0.04);
+  }
+  
   .gift-card-actions {
     margin-top: auto;
   }
@@ -768,7 +760,6 @@
     color: rgba(var(--color-foreground), 0.55);
   }
   
-  /* Selected Product Display - MORE EFFICIENT */
   .gift-selected {
     margin: 1.5rem 0;
     padding: 1.5rem;
@@ -857,7 +848,6 @@
     position: relative;
   }
   
-  /* Responsive selected gift */
   @media screen and (max-width: 549px) {
     .gift-selected {
       padding: 1.2rem;
@@ -878,7 +868,6 @@
     }
   }
   
-  /* Success State */
   .gift-success-card {
     background: rgba(16, 185, 129, 0.04);
     border-left: 0.4rem solid rgb(16, 185, 129);
@@ -910,7 +899,6 @@
     color: rgb(var(--color-foreground));
   }
   
-  /* Prevent FOUC for success state */
   .gift-state--success {
     opacity: 0;
     transition: opacity 0.4s ease;
@@ -924,7 +912,6 @@
     opacity: 1;
   }
   
-  /* Button Overrides */
   .gift-add-btn {
     width: 100%;
     position: relative;
@@ -947,7 +934,6 @@
     visibility: hidden;
   }
   
-  /* Notification Toast */
   .gift-notification {
     position: fixed;
     top: 2rem;
@@ -991,7 +977,6 @@
     color: rgb(255, 255, 255);
   }
   
-  /* Loading State */
   .gift-threshold-loading {
     position: relative;
     pointer-events: none;
@@ -1009,7 +994,6 @@
     z-index: 1;
   }
   
-  /* Responsive */
   @media screen and (max-width: 749px) {
     .gift-container {
       padding: 2rem;
@@ -1037,7 +1021,6 @@
     }
   }
   
-  /* Animations */
   .gift-state {
     animation: fadeIn var(--duration-default) ease;
   }
@@ -1053,7 +1036,17 @@
     }
   }
   
-  /* Focus states */
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-1rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
   .gift-select-btn:focus-visible,
   .gift-add-btn:focus-visible,
   .gift-variant-select:focus-visible {
@@ -1063,7 +1056,6 @@
                 0 0 0 0.5rem rgba(var(--color-foreground), 0.5);
   }
   
-  /* Motion Reduced */
   @media (prefers-reduced-motion) {
     .gift-progress-fill,
     .gift-card-inner,
@@ -1080,7 +1072,6 @@
   }
 </style>
 
-<!-- Include JavaScript file -->
 {{ 'free-gift-threshold.js' | asset_url | script_tag }}
 
 {% schema %}

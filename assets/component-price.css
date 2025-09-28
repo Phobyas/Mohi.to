@@ -1,8 +1,12 @@
+/* Enhanced Price Component - Modern Streetwear Style */
+
 .price {
   font-size: 1.6rem;
-  letter-spacing: 0.1rem;
+  letter-spacing: 0.05rem;
   line-height: calc(1 + 0.5 / var(--font-body-scale));
   color: rgb(var(--color-foreground));
+  font-family: var(--font-heading-family);
+  font-weight: 600;
 }
 
 .price > * {
@@ -20,7 +24,13 @@
 
 .price .price-item {
   display: inline-block;
-  margin: 0 1rem 0 0;
+  margin: 0 1.2rem 0 0;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.price .price-item:hover {
+  transform: translateY(-1px);
 }
 
 .price__regular .price-item--regular {
@@ -37,15 +47,17 @@
   }
 }
 
+/* Enhanced Large Price Styling */
 .price--large {
-  font-size: 1.6rem;
-  line-height: calc(1 + 0.5 / var(--font-body-scale));
-  letter-spacing: 0.13rem;
+  font-size: 1.8rem;
+  line-height: calc(1 + 0.4 / var(--font-body-scale));
+  letter-spacing: 0.08rem;
+  font-weight: 700;
 }
 
 @media screen and (min-width: 750px) {
   .price--large {
-    font-size: 1.8rem;
+    font-size: 2.2rem;
   }
 }
 
@@ -70,7 +82,7 @@
 }
 
 .volume-pricing--sale-badge .price__badge-sale {
-  margin-left: 0.5rem;
+  margin-left: 0.8rem;
 }
 
 .price--on-sale .price__sale {
@@ -84,17 +96,291 @@
   justify-content: center;
 }
 
+/* Enhanced Sale Price Styling */
 .price--on-sale .price-item--regular {
   text-decoration: line-through;
-  color: rgba(var(--color-foreground), 0.75);
-  font-size: 1.3rem;
+  color: rgba(var(--color-foreground), 0.5);
+  font-size: 1.4rem;
+  font-weight: 400;
+  position: relative;
 }
 
+.price--on-sale .price-item--regular::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(var(--color-foreground), 0.4);
+  transform: translateY(-50%);
+}
+
+/* Sale Price with Gradient */
+.price--on-sale .price-item--sale,
+.price .price-item--sale {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+}
+
+.price .price-item--sale::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.price .price-item--sale:hover::after {
+  opacity: 1;
+}
+
+/* Enhanced Badges */
+.price__badge-sale,
+.price__badge-sold-out {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 1.5rem;
+  margin-left: 0.8rem;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: fadeInScale 0.5s ease;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.price__badge-sale {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.price__badge-sold-out {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* Enhanced Unit Price */
 .unit-price {
   display: block;
-  font-size: 1.1rem;
-  letter-spacing: 0.04rem;
-  line-height: calc(1 + 0.2 / var(--font-body-scale));
-  margin-top: 0.2rem;
-  color: rgba(var(--color-foreground), 0.7);
+  font-size: 1rem;
+  letter-spacing: 0.03rem;
+  line-height: calc(1 + 0.3 / var(--font-body-scale));
+  margin-top: 0.4rem;
+  color: rgba(var(--color-foreground), 0.6);
+  font-weight: 400;
+  font-family: var(--font-body-family);
+  font-style: italic;
+}
+
+/* Price Container Enhancements */
+.price__container {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.price__container--column {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.price__container--center {
+  justify-content: center;
+  align-items: center;
+}
+
+/* Currency Symbol Styling */
+.price .price-item::before {
+  font-size: 0.8em;
+  opacity: 0.8;
+  margin-right: 0.2rem;
+}
+
+/* Price Range Styling */
+.price--range .price-item {
+  position: relative;
+}
+
+.price--range .price-item:not(:last-child)::after {
+  content: "—";
+  margin: 0 0.8rem;
+  opacity: 0.6;
+  font-weight: 400;
+}
+
+/* Savings Indicator */
+.price__savings {
+  background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+  color: white;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 1rem;
+  margin-left: 0.8rem;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Percentage Discount Display */
+.price__discount-percentage {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 1.5rem;
+  margin-left: 0.8rem;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+  position: relative;
+  overflow: hidden;
+}
+
+.price__discount-percentage::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Price Loading State */
+.price--loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.price--loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--color-foreground), 0.1),
+    transparent
+  );
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.price--loading .price-item {
+  opacity: 0.3;
+}
+
+/* Accessibility Enhancements */
+.price__sr-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* High Contrast Mode Support */
+@media (forced-colors: active) {
+  .price .price-item--sale {
+    color: Highlight;
+    -webkit-text-fill-color: Highlight;
+  }
+
+  .price__badge-sale,
+  .price__badge-sold-out {
+    border: 1px solid ButtonText;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .price .price-item,
+  .price__badge-sale,
+  .price__badge-sold-out,
+  .price__savings,
+  .price__discount-percentage,
+  .price--loading {
+    animation: none;
+    transition: none;
+  }
+
+  .price .price-item:hover {
+    transform: none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .price__badge-sale,
+  .price__badge-sold-out,
+  .price__savings,
+  .price__discount-percentage {
+    background: transparent !important;
+    color: black !important;
+    border: 1px solid black !important;
+  }
 }

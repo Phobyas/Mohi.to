@@ -1,4 +1,4 @@
-<!-- Products Carousel Section for Shopify Dawn Theme - Streetwear Store -->
+<!-- Enhanced Products Carousel Section for Shopify Dawn Theme - Modern Streetwear Store -->
 {% assign collection_handle = section.settings.collection %}
 {% assign collection = collections[collection_handle] %}
 {% assign products_to_show = section.settings.products_to_show | default: 8 %}
@@ -6,221 +6,464 @@
 {% assign products_per_view_mobile = section.settings.products_per_view_mobile | default: 2 %}
 
 {% unless template.name == 'cart' or request.page_type == 'cart' %}
-  <!-- Your existing gift threshold section content goes here -->
-  
   <div class="gift-threshold" data-threshold="{{ threshold }}">
-    <!-- All your gift threshold content -->
   </div>
-  
 {% endunless %}
 
-<section class="products-carousel section-{{ section.id }}" data-section-id="{{ section.id }}">
+<section class="products-carousel-enhanced section-{{ section.id }}" data-section-id="{{ section.id }}">
   <style>
-    .products-carousel {
-      padding: 3rem 0;
+    .products-carousel-enhanced {
+      --border-radius: 0.8rem;
+      --spacing-unit: 2rem;
+      padding: 4rem 0;
       background: {{ section.settings.background_color | default: '#FFFFFF' }};
+      position: relative;
     }
 
-    .products-carousel__container {
+    .products-carousel-enhanced::before {
+      display: none;
+    }
+
+    .products-carousel-enhanced__container {
       max-width: var(--page-width);
       margin: 0 auto;
-      padding: 0 1.5rem;
+      padding: 0 2rem;
+      position: relative;
+      z-index: 1;
     }
 
-    .products-carousel__header {
+    .products-carousel-enhanced__header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 2rem;
+      margin-bottom: 3rem;
+      gap: 2rem;
     }
 
-    .products-carousel__title {
+    .products-carousel-enhanced__title-wrapper {
+      flex: 1;
+    }
+
+    .products-carousel-enhanced__title {
       font-family: var(--font-heading-family);
-      font-size: 2.5rem;
-      font-weight: var(--font-heading-weight);
-      text-transform: uppercase;
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.1;
       margin: 0;
+      color: rgb(var(--color-foreground));
     }
 
-    .products-carousel__controls {
+    .products-carousel-enhanced__subtitle {
+      font-size: 1.1rem;
+      color: rgba(var(--color-foreground), 0.7);
+      margin-top: 0.8rem;
+      font-weight: 400;
+    }
+
+    .products-carousel-enhanced__controls {
       display: flex;
-      gap: 0.5rem;
+      gap: 1rem;
+      align-items: center;
     }
 
     .carousel-nav-button {
-      width: 40px;
-      height: 40px;
-      background: #000;
-      border: none;
-      color: white;
+      width: 4.4rem;
+      height: 4.4rem;
+      background: rgb(var(--color-background));
+      border: 1px solid rgba(var(--color-foreground), 0.15);
+      border-radius: 50%;
+      color: var(--color-foreground);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: opacity 0.2s ease;
+      transition: all 0.2s ease;
+      box-shadow: 0 0.2rem 0.4rem rgba(0, 0, 0, 0.04);
     }
 
-    .carousel-nav-button:hover {
-      opacity: 0.8;
+    .carousel-nav-button:hover:not(:disabled) {
+      background: rgb(var(--color-foreground));
+      color: rgb(var(--color-background));
+      transform: translateY(-1px);
+      box-shadow: 0 0.3rem 0.6rem rgba(0, 0, 0, 0.08);
     }
 
     .carousel-nav-button:disabled {
-      opacity: 0.3;
+      opacity: 0.4;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 0.1rem 0.2rem rgba(0, 0, 0, 0.02);
     }
 
     .carousel-nav-button svg {
-      width: 20px;
-      height: 20px;
+      width: 2rem;
+      height: 2rem;
       fill: currentColor;
+      transition: transform 0.2s ease;
     }
 
-    .products-carousel__track-wrapper {
+    .carousel-nav-button:hover:not(:disabled) svg {
+      transform: scale(1.1);
+    }
+
+    .products-carousel-enhanced__track-wrapper {
       overflow: hidden;
+      border-radius: var(--border-radius);
+      position: relative;
     }
 
-    .products-carousel__track {
+    .products-carousel-enhanced__track {
       display: flex;
-      transition: transform 0.3s ease;
-      gap: 1rem;
+      transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      gap: 1.5rem;
+      padding: 0.5rem;
     }
 
-    .carousel-product {
-      flex: 0 0 calc(100% / {{ products_per_view }} - 0.75rem);
+    .carousel-product-enhanced {
+      flex: 0 0 calc(100% / {{ products_per_view }} - 1.125rem);
       min-width: 0;
-      background: #fff;
-      border: 1px solid #e5e5e5;
+      background: rgb(var(--color-background));
+      border: 1px solid rgba(var(--color-foreground), 0.1);
+      border-radius: var(--border-radius);
       text-decoration: none;
       display: block;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .carousel-product-enhanced::before {
+      display: none;
+    }
+
+    .carousel-product-enhanced:hover {
+      transform: translateY(-0.4rem);
+      box-shadow: 0 0.4rem 0.8rem rgba(0, 0, 0, 0.08);
+      border-color: rgba(var(--color-foreground), 0.2);
     }
 
     @media (max-width: 767px) {
-      .carousel-product {
-        flex: 0 0 calc(100% / {{ products_per_view_mobile }} - 0.5rem);
+      .carousel-product-enhanced {
+        flex: 0 0 calc(100% / {{ products_per_view_mobile }} - 0.75rem);
       }
     }
 
-    .carousel-product__media {
+    .carousel-product-enhanced__media {
       position: relative;
       aspect-ratio: 1/1;
       overflow: hidden;
-      background: #f8f8f8;
+      background: #f8f9fa;
+      border-radius: var(--border-radius) var(--border-radius) 0 0;
     }
 
-    .carousel-product__image {
+    .carousel-product-enhanced__image {
       width: 100%;
       height: 100%;
       object-fit: contain;
       display: block;
-      mix-blend-mode: multiply;
+      transition: transform 0.3s ease;
     }
 
-    .carousel-product__badge {
+    .carousel-product-enhanced:hover .carousel-product-enhanced__image {
+      transform: scale(1.02);
+    }
+
+    .carousel-product-enhanced__badge {
       position: absolute;
-      top: 0.5rem;
-      left: 0.5rem;
-      background: #ff0000;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(0, 0, 0, 0.8);
       color: white;
-      padding: 0.25rem 0.5rem;
+      padding: 0.4rem 0.8rem;
       font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      border-radius: 0.4rem;
+      z-index: 2;
+    }
+
+    .carousel-product-enhanced__badge--sale {
+      background: rgba(220, 38, 127, 0.9);
+    }
+
+    .carousel-product-enhanced__badge--new {
+      background: rgba(16, 185, 129, 0.9);
+    }
+
+    .carousel-product-enhanced__badge--soldout {
+      background: rgba(0, 0, 0, 0.9);
+    }
+
+    .carousel-product-enhanced__wishlist {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 3.2rem;
+      height: 3.2rem;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(var(--color-foreground), 0.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      opacity: 0;
+      transform: scale(0.8);
+      z-index: 3;
+    }
+
+    .carousel-product-enhanced:hover .carousel-product-enhanced__wishlist {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .carousel-product-enhanced__wishlist:hover {
+      background: rgb(var(--color-background));
+      transform: scale(1.05);
+      box-shadow: 0 0.2rem 0.4rem rgba(0, 0, 0, 0.08);
+    }
+
+    .carousel-product-enhanced__wishlist svg {
+      width: 1.6rem;
+      height: 1.6rem;
+      fill: var(--color-foreground);
+      transition: fill 0.2s ease;
+    }
+
+    .carousel-product-enhanced__wishlist:hover svg {
+      fill: #dc2626;
+    }
+
+    .carousel-product-enhanced__info {
+      padding: 1.5rem;
+      background: rgb(var(--color-background));
+    }
+
+    .carousel-product-enhanced__vendor {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: rgba(var(--color-foreground), 0.6);
+      margin: 0 0 0.6rem;
+      letter-spacing: 0.1em;
+      font-weight: 500;
+    }
+
+    .carousel-product-enhanced__title {
+      font-size: 1.1rem;
+      color: var(--color-foreground);
+      margin: 0 0 1rem;
       font-weight: 600;
-      text-transform: uppercase;
-      z-index: 1;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: color 0.3s ease;
     }
 
-    .carousel-product__badge--soldout {
-      background: #000;
+    .carousel-product-enhanced:hover .carousel-product-enhanced__title {
+      color: #667eea;
     }
 
-    .carousel-product__info {
-      padding: 1rem;
+    .carousel-product-enhanced__price-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
     }
 
-    .carousel-product__vendor {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      color: #666;
-      margin: 0 0 0.25rem;
+    .carousel-product-enhanced__price {
+      font-family: var(--font-heading-family);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--color-foreground);
     }
 
-    .carousel-product__title {
+    .carousel-product-enhanced__price--sale {
+      color: #dc2626;
+    }
+
+    .carousel-product-enhanced__price--compare {
       font-size: 1rem;
-      color: #000;
-      margin: 0 0 0.5rem;
-      text-transform: uppercase;
-      font-weight: 600;
+      color: rgba(var(--color-foreground), 0.5);
+      text-decoration: line-through;
+      font-weight: 400;
     }
 
-    .carousel-product__price-wrapper {
+    .carousel-product-enhanced__rating {
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
 
-    .carousel-product__price {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #000;
+    .rating-stars-enhanced {
+      display: flex;
+      gap: 0.2rem;
     }
 
-    .carousel-product__price--sale {
-      color: #ff0000;
+    .star-enhanced {
+      width: 12px;
+      height: 12px;
+      fill: #fdcb6e;
     }
 
-    .carousel-product__price--compare {
+    .star-enhanced--empty {
+      fill: rgba(var(--color-foreground), 0.2);
+    }
+
+    .rating-count-enhanced {
+      font-size: 0.75rem;
+      color: rgba(var(--color-foreground), 0.6);
+    }
+
+    .carousel-product-enhanced__quick-add {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 1.5rem;
+      right: 1.5rem;
+      background: var(--gradient-primary);
+      color: white;
+      border: none;
+      border-radius: 0.8rem;
+      padding: 1rem;
       font-size: 0.9rem;
-      color: #999;
-      text-decoration: line-through;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(1rem);
     }
 
-    .carousel-pagination {
+    .carousel-product-enhanced:hover .carousel-product-enhanced__quick-add {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .carousel-product-enhanced__quick-add:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0.8rem 1.6rem rgba(102, 126, 234, 0.4);
+    }
+
+    .carousel-pagination-enhanced {
       display: flex;
       justify-content: center;
-      gap: 0.5rem;
-      margin-top: 2rem;
+      gap: 0.8rem;
+      margin-top: 3rem;
     }
 
-    .carousel-dot {
-      width: 8px;
-      height: 8px;
+    .carousel-dot-enhanced {
+      width: 0.8rem;
+      height: 0.8rem;
       border-radius: 50%;
-      background: #ccc;
+      background: rgba(var(--color-foreground), 0.2);
       border: none;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: all 0.2s ease;
       padding: 0;
+      position: relative;
     }
 
-    .carousel-dot--active {
-      background: #000;
+    .carousel-dot-enhanced--active,
+    .carousel-dot-enhanced:hover {
+      background: rgb(var(--color-foreground));
     }
 
-    @media (max-width: 767px) {
-      .products-carousel__header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
+    .carousel-progress {
+      display: none;
+    }
+
+    .carousel-product-enhanced__loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 3rem;
+      height: 3rem;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .carousel-product-enhanced--loading .carousel-product-enhanced__loading {
+      opacity: 1;
+    }
+
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @media screen and (max-width: 767px) {
+      .products-carousel-enhanced {
+        padding: 3rem 0;
       }
 
-      .products-carousel__controls {
+      .products-carousel-enhanced__container {
+        padding: 0 1.5rem;
+      }
+
+      .products-carousel-enhanced__header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .products-carousel-enhanced__controls {
         align-self: flex-end;
       }
 
-      .products-carousel__title {
-        font-size: 1.8rem;
+      .carousel-nav-button {
+        width: 4rem;
+        height: 4rem;
+      }
+
+      .carousel-nav-button svg {
+        width: 1.8rem;
+        height: 1.8rem;
+      }
+
+      .products-carousel-enhanced__track {
+        gap: 1rem;
+      }
+
+      .carousel-product-enhanced__info {
+        padding: 1.2rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .products-carousel-enhanced__track,
+      .carousel-product-enhanced,
+      .carousel-product-enhanced__image,
+      .carousel-nav-button {
+        transition: none;
+      }
+
+      .carousel-product-enhanced:hover {
+        transform: none;
       }
     }
   </style>
 
-  <div class="products-carousel__container">
-    <div class="products-carousel__header">
-      <div class="products-carousel__title-wrapper">
+  <div class="products-carousel-enhanced__container">
+    <div class="products-carousel-enhanced__header">
+      <div class="products-carousel-enhanced__title-wrapper">
         {% if section.settings.title != blank %}
-          <h2 class="products-carousel__title">{{ section.settings.title }}</h2>
+          <h2 class="products-carousel-enhanced__title">{{ section.settings.title }}</h2>
+        {% endif %}
+        {% if section.settings.subtitle != blank %}
+          <p class="products-carousel-enhanced__subtitle">{{ section.settings.subtitle }}</p>
         {% endif %}
       </div>
 
-      <div class="products-carousel__controls">
+      <div class="products-carousel-enhanced__controls">
         <button class="carousel-nav-button carousel-nav-button--prev" aria-label="Previous products">
           <svg viewBox="0 0 24 24">
             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
@@ -234,15 +477,19 @@
       </div>
     </div>
 
-    <div class="products-carousel__track-wrapper">
-      <div class="products-carousel__track" data-carousel-track>
+    <div class="carousel-progress">
+      <div class="carousel-progress__bar" data-carousel-progress></div>
+    </div>
+
+    <div class="products-carousel-enhanced__track-wrapper">
+      <div class="products-carousel-enhanced__track" data-carousel-track>
         {% if collection != blank %}
           {% for product in collection.products limit: products_to_show %}
-            <a href="{{ product.url }}" class="carousel-product" data-product-id="{{ product.id }}">
-              <div class="carousel-product__media">
+            <a href="{{ product.url }}" class="carousel-product-enhanced" data-product-id="{{ product.id }}">
+              <div class="carousel-product-enhanced__media">
                 {% if product.featured_image %}
                   <img 
-                    class="carousel-product__image"
+                    class="carousel-product-enhanced__image"
                     src="{{ product.featured_image | image_url: width: 500 }}"
                     alt="{{ product.title | escape }}"
                     loading="lazy"
@@ -250,45 +497,75 @@
                     height="500"
                   >
                 {% else %}
-                  {{ 'product-1' | placeholder_svg_tag: 'carousel-product__image' }}
+                  {{ 'product-1' | placeholder_svg_tag: 'carousel-product-enhanced__image' }}
                 {% endif %}
 
                 {% if product.available == false %}
-                  <span class="carousel-product__badge carousel-product__badge--soldout">Sold Out</span>
+                  <span class="carousel-product-enhanced__badge carousel-product-enhanced__badge--soldout">Sold Out</span>
                 {% elsif product.compare_at_price > product.price %}
-                  <span class="carousel-product__badge">Sale</span>
+                  <span class="carousel-product-enhanced__badge carousel-product-enhanced__badge--sale">Sale</span>
+                {% elsif product.metafields.custom.is_new == true %}
+                  <span class="carousel-product-enhanced__badge carousel-product-enhanced__badge--new">New</span>
                 {% endif %}
+
+                <div class="carousel-product-enhanced__wishlist" data-wishlist-toggle="{{ product.id }}">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </div>
+
+                <div class="carousel-product-enhanced__loading"></div>
               </div>
 
-              <div class="carousel-product__info">
+              <div class="carousel-product-enhanced__info">
                 {% if section.settings.show_vendor and product.vendor %}
-                  <p class="carousel-product__vendor">{{ product.vendor }}</p>
+                  <p class="carousel-product-enhanced__vendor">{{ product.vendor }}</p>
                 {% endif %}
                 
-                <h3 class="carousel-product__title">{{ product.title }}</h3>
+                <h3 class="carousel-product-enhanced__title">{{ product.title }}</h3>
                 
-                <div class="carousel-product__price-wrapper">
+                <div class="carousel-product-enhanced__price-wrapper">
                   {% if product.compare_at_price > product.price %}
-                    <span class="carousel-product__price carousel-product__price--sale">{{ product.price | money_without_currency }}</span>
-                    <span class="carousel-product__price carousel-product__price--compare">{{ product.compare_at_price | money_without_currency }}</span>
+                    <span class="carousel-product-enhanced__price carousel-product-enhanced__price--sale">{{ product.price | money_without_currency }}</span>
+                    <span class="carousel-product-enhanced__price carousel-product-enhanced__price--compare">{{ product.compare_at_price | money_without_currency }}</span>
                   {% else %}
-                    <span class="carousel-product__price">{{ product.price | money_without_currency }}</span>
+                    <span class="carousel-product-enhanced__price">{{ product.price | money_without_currency }}</span>
                   {% endif %}
                 </div>
+
+                {% if section.settings.show_rating and product.metafields.reviews.rating.value != blank %}
+                  {% assign rating = product.metafields.reviews.rating.value | round %}
+                  {% assign rating_count = product.metafields.reviews.rating_count %}
+                  <div class="carousel-product-enhanced__rating">
+                    <div class="rating-stars-enhanced">
+                      {% for i in (1..5) %}
+                        {% if i <= rating %}
+                          <svg class="star-enhanced" viewBox="0 0 24 24">
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                          </svg>
+                        {% else %}
+                          <svg class="star-enhanced star-enhanced--empty" viewBox="0 0 24 24">
+                            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                          </svg>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                    <span class="rating-count-enhanced">({{ rating_count }})</span>
+                  </div>
+                {% endif %}
               </div>
             </a>
           {% endfor %}
         {% else %}
-          {% comment %} Placeholder products for theme editor {% endcomment %}
           {% for i in (1..products_to_show) %}
-            <div class="carousel-product">
-              <div class="carousel-product__media">
-                {{ 'product-' | append: i | placeholder_svg_tag: 'carousel-product__image' }}
+            <div class="carousel-product-enhanced">
+              <div class="carousel-product-enhanced__media">
+                {{ 'product-' | append: i | placeholder_svg_tag: 'carousel-product-enhanced__image' }}
               </div>
-              <div class="carousel-product__info">
-                <h3 class="carousel-product__title">Example Product {{ i }}</h3>
-                <div class="carousel-product__price-wrapper">
-                  <span class="carousel-product__price">$99.00</span>
+              <div class="carousel-product-enhanced__info">
+                <h3 class="carousel-product-enhanced__title">Example Product {{ i }}</h3>
+                <div class="carousel-product-enhanced__price-wrapper">
+                  <span class="carousel-product-enhanced__price">$99.00</span>
                 </div>
               </div>
             </div>
@@ -297,7 +574,7 @@
       </div>
     </div>
 
-    <div class="carousel-pagination" data-carousel-pagination></div>
+    <div class="carousel-pagination-enhanced" data-carousel-pagination></div>
   </div>
 </section>
 
@@ -308,27 +585,27 @@
     const prevButton = carousel.querySelector('.carousel-nav-button--prev');
     const nextButton = carousel.querySelector('.carousel-nav-button--next');
     const pagination = carousel.querySelector('[data-carousel-pagination]');
+    const progressBar = carousel.querySelector('[data-carousel-progress]');
     
-    const products = track.querySelectorAll('.carousel-product');
+    const products = track.querySelectorAll('.carousel-product-enhanced');
     const productsPerView = window.innerWidth > 767 ? {{ products_per_view }} : {{ products_per_view_mobile }};
     const totalProducts = products.length;
     const totalPages = Math.ceil(totalProducts / productsPerView);
     
     let currentPage = 0;
+    let autoplayInterval;
 
-    // Create pagination dots
     function createPagination() {
       pagination.innerHTML = '';
       for (let i = 0; i < totalPages; i++) {
         const dot = document.createElement('button');
-        dot.className = 'carousel-dot';
-        if (i === 0) dot.classList.add('carousel-dot--active');
+        dot.className = 'carousel-dot-enhanced';
+        if (i === 0) dot.classList.add('carousel-dot-enhanced--active');
         dot.addEventListener('click', () => goToPage(i));
         pagination.appendChild(dot);
       }
     }
 
-    // Update carousel position
     function updateCarousel() {
       const productWidth = products[0].offsetWidth;
       const gap = parseFloat(getComputedStyle(track).gap) || 16;
@@ -338,21 +615,50 @@
       prevButton.disabled = currentPage === 0;
       nextButton.disabled = currentPage === totalPages - 1;
 
-      const dots = pagination.querySelectorAll('.carousel-dot');
+      const dots = pagination.querySelectorAll('.carousel-dot-enhanced');
       dots.forEach((dot, index) => {
-        dot.classList.toggle('carousel-dot--active', index === currentPage);
+        dot.classList.toggle('carousel-dot-enhanced--active', index === currentPage);
       });
+
+      const progress = ((currentPage + 1) / totalPages) * 100;
+      progressBar.style.width = `${progress}%`;
     }
 
     function goToPage(page) {
       currentPage = Math.max(0, Math.min(page, totalPages - 1));
       updateCarousel();
+      resetAutoplay();
+    }
+
+    function nextPage() {
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+      } else {
+        currentPage = 0;
+      }
+      updateCarousel();
+    }
+
+    function startAutoplay() {
+      autoplayInterval = setInterval(nextPage, 5000);
+    }
+
+    function stopAutoplay() {
+      if (autoplayInterval) {
+        clearInterval(autoplayInterval);
+      }
+    }
+
+    function resetAutoplay() {
+      stopAutoplay();
+      startAutoplay();
     }
 
     prevButton.addEventListener('click', () => {
       if (currentPage > 0) {
         currentPage--;
         updateCarousel();
+        resetAutoplay();
       }
     });
 
@@ -360,24 +666,60 @@
       if (currentPage < totalPages - 1) {
         currentPage++;
         updateCarousel();
+        resetAutoplay();
       }
+    });
+
+    carousel.addEventListener('mouseenter', stopAutoplay);
+    carousel.addEventListener('mouseleave', startAutoplay);
+
+    const quickAddButtons = carousel.querySelectorAll('[data-quick-add]');
+    quickAddButtons.forEach(button => {
+      // Quick add functionality removed
+    });
+
+    const wishlistButtons = carousel.querySelectorAll('[data-wishlist-toggle]');
+    wishlistButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const productId = this.dataset.wishlistToggle;
+        document.dispatchEvent(new CustomEvent('wishlist:toggle', { detail: { productId } }));
+        
+        this.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+          this.style.transform = 'scale(1)';
+        }, 200);
+      });
     });
 
     createPagination();
     updateCarousel();
+    startAutoplay();
+
+    window.addEventListener('resize', () => {
+      updateCarousel();
+    });
   })();
 </script>
 
 {% schema %}
 {
-  "name": "Products Carousel",
-  "class": "section-products-carousel",
+  "name": " Products Carousel",
+  "class": "section-products-carousel-enhanced",
   "settings": [
     {
       "type": "text",
       "id": "title",
       "label": "Title",
       "default": "Featured Products"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Discover our latest collection of premium streetwear"
     },
     {
       "type": "collection",
@@ -418,6 +760,12 @@
       "default": false
     },
     {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Show product ratings",
+      "default": true
+    },
+    {
       "type": "color",
       "id": "background_color",
       "label": "Background color",
@@ -426,7 +774,7 @@
   ],
   "presets": [
     {
-      "name": "Products Carousel",
+      "name": "Enhanced Products Carousel",
       "category": "Collection"
     }
   ]

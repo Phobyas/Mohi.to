@@ -1,60 +1,15 @@
 /**
- * Free Gift Threshold Manager - Enhanced Version with Reliability Fixes
- * File: assets/free-gift-threshold.js
+ * Free Gift Threshold Manager - Conservative Optimization
+ * Maintaining all functionality while reducing code size
  */
 
 (function () {
-  // Performance improvements: Cache DOM selectors and reduce global scope pollution
-  const DOMCache = {
-    cartCountBubble: null,
-    cartSubtotal: null,
-    cartTotal: null,
-    cartDrawer: null,
-    cartItems: null,
-    init() {
-      // Lazy load selectors when needed
-      this.cartCountBubble =
-        this.cartCountBubble || document.querySelector(".cart-count-bubble");
-      this.cartSubtotal =
-        this.cartSubtotal || document.querySelector(".totals__subtotal-value");
-      this.cartTotal =
-        this.cartTotal || document.querySelector(".totals__total-value");
-      this.cartDrawer =
-        this.cartDrawer || document.querySelector("cart-drawer");
-      this.cartItems =
-        this.cartItems || document.querySelector("cart-drawer-items");
-      return this;
-    },
-    refresh() {
-      // Clear cache to force re-query (useful after DOM updates)
-      this.cartCountBubble = null;
-      this.cartSubtotal = null;
-      this.cartTotal = null;
-      this.cartDrawer = null;
-      this.cartItems = null;
-      return this.init();
-    },
-  };
-
-  // Transaction lock to prevent race conditions
-  const TransactionLock = {
-    locks: new Set(),
-
-    acquire(key) {
-      if (this.locks.has(key)) {
-        return false;
-      }
-      this.locks.add(key);
-      return true;
-    },
-
-    release(key) {
-      this.locks.delete(key);
-    },
-
-    isLocked(key) {
-      return this.locks.has(key);
-    },
+  // Consolidated constants and utilities
+  const CONFIG = {
+    DEBOUNCE_TIME: 100,
+    PROTECTION_DEBOUNCE: 500,
+    RETRY_MAX: 3,
+    RETRY_DELAY: 500,
   };
 
   // Enhanced logging utility
@@ -65,10 +20,8 @@
 
     log(level, message, data = null) {
       if (!this.enabled) return;
-
       const timestamp = new Date().toISOString();
       const logMessage = `[${timestamp}] [GIFT-${level.toUpperCase()}] ${message}`;
-
       if (data) {
         console[level](logMessage, data);
       } else {
@@ -90,22 +43,70 @@
     },
   };
 
+  // Performance improvements: Cache DOM selectors
+  const DOMCache = {
+    cartCountBubble: null,
+    cartSubtotal: null,
+    cartTotal: null,
+    cartDrawer: null,
+    cartItems: null,
+
+    init() {
+      this.cartCountBubble =
+        this.cartCountBubble || document.querySelector(".cart-count-bubble");
+      this.cartSubtotal =
+        this.cartSubtotal || document.querySelector(".totals__subtotal-value");
+      this.cartTotal =
+        this.cartTotal || document.querySelector(".totals__total-value");
+      this.cartDrawer =
+        this.cartDrawer || document.querySelector("cart-drawer");
+      this.cartItems =
+        this.cartItems || document.querySelector("cart-drawer-items");
+      return this;
+    },
+
+    refresh() {
+      this.cartCountBubble = null;
+      this.cartSubtotal = null;
+      this.cartTotal = null;
+      this.cartDrawer = null;
+      this.cartItems = null;
+      return this.init();
+    },
+  };
+
+  // Transaction lock to prevent race conditions
+  const TransactionLock = {
+    locks: new Set(),
+    acquire(key) {
+      if (this.locks.has(key)) return false;
+      this.locks.add(key);
+      return true;
+    },
+    release(key) {
+      this.locks.delete(key);
+    },
+    isLocked(key) {
+      return this.locks.has(key);
+    },
+  };
+
   // Enhanced retry utility
   const RetryHelper = {
-    async execute(fn, maxRetries = 3, delay = 500) {
+    async execute(
+      fn,
+      maxRetries = CONFIG.RETRY_MAX,
+      delay = CONFIG.RETRY_DELAY
+    ) {
       let lastError;
-
       for (let i = 0; i <= maxRetries; i++) {
         try {
           const result = await fn();
-          if (i > 0) {
-            Logger.info(`Operation succeeded after ${i} retries`);
-          }
+          if (i > 0) Logger.info(`Operation succeeded after ${i} retries`);
           return result;
         } catch (error) {
           lastError = error;
           Logger.warn(`Attempt ${i + 1} failed:`, error.message);
-
           if (i < maxRetries) {
             await new Promise((resolve) =>
               setTimeout(resolve, delay * Math.pow(2, i))
@@ -113,7 +114,6 @@
           }
         }
       }
-
       Logger.error(
         `Operation failed after ${maxRetries + 1} attempts:`,
         lastError
@@ -132,10 +132,8 @@
       this.cartData = null;
       this.lastCartTotal = 0;
       this.lastUpdateTime = 0;
-      this.updateDebounceTime = 100; // Prevent excessive updates
+      this.updateDebounceTime = CONFIG.DEBOUNCE_TIME;
       this.monitoringActive = false;
-
-      // Enhanced event listener tracking for cleanup
       this.eventListeners = [];
 
       // Bind methods to preserve context
@@ -167,21 +165,12 @@
     async init() {
       try {
         Logger.debug("Starting initialization");
-
-        // Get initial cart state
         await this.fetchCart();
-
-        // Set up event listeners
         this.attachEventListeners();
-
-        // Start monitoring (only once)
         if (!this.monitoringActive) {
           this.startMonitoring();
         }
-
-        // Initial UI update
         this.updateUI();
-
         Logger.info("Initialization completed successfully");
       } catch (error) {
         Logger.error("Initialization failed:", error);
@@ -189,17 +178,13 @@
     }
 
     attachEventListeners() {
-      // Clear existing listeners first
       this.removeAllEventListeners();
-
-      // Add section change listener
       this.addEventListenerTracked(
         this.section,
         "change",
         this.handleSectionChange
       );
 
-      // Add gift button listener
       const addBtn = this.section.querySelector(".gift-add-btn");
       if (addBtn) {
         this.addEventListenerTracked(addBtn, "click", this.handleAddGift);
@@ -242,16 +227,12 @@
       );
       if (variantSelection) {
         variantSelection.style.display = "block";
-
-        // Reset variant selection
         const variantSelect = variantSelection.querySelector(
           ".gift-variant-select"
         );
         if (variantSelect) {
           variantSelect.value = "";
         }
-
-        // Don't proceed until variant is chosen
         this.selectedGift = null;
         this.hideSelectedGift();
         return;
@@ -275,7 +256,6 @@
           price: firstVariantPrice,
           image: productImage,
         };
-
         Logger.debug("Gift selected from data attributes:", this.selectedGift);
         this.showSelectedGift();
       } else {
@@ -322,7 +302,6 @@
         subscribe(PUB_SUB_EVENTS.cartUpdate, this.handleCartUpdate);
       }
 
-      // Listen to cart form changes
       this.attachCartListeners();
     }
 
@@ -373,7 +352,6 @@
         Logger.debug("Skipping self-triggered cart update");
         return;
       }
-
       Logger.debug("Handling external cart update");
       await this.debouncedUpdate();
     }
@@ -382,7 +360,7 @@
       const now = Date.now();
       if (now - this.lastUpdateTime < this.updateDebounceTime) {
         Logger.debug("Update debounced - too recent");
-        return; // Skip if updated too recently
+        return;
       }
       this.lastUpdateTime = now;
 
@@ -465,17 +443,12 @@
       // Show appropriate state with immediate visibility
       if (hasGift) {
         if (states.success) {
-          // Update success info BEFORE showing the state
           this.updateSuccessInfo();
-
-          // Then show the state immediately
           states.success.style.display = "block";
           states.success.style.visibility = "visible";
-          states.success.style.opacity = "1"; // Force opacity
+          states.success.style.opacity = "1";
           states.success.classList.add("loaded");
-
-          // Force a reflow to ensure immediate display
-          states.success.offsetHeight;
+          states.success.offsetHeight; // Force reflow
         }
       } else if (thresholdMet) {
         if (states.selector) {
@@ -565,7 +538,6 @@
 
       if (giftItem) {
         const infoEl = this.section.querySelector(".gift-selected-info-text");
-
         if (infoEl) {
           let title = giftItem.product_title;
           if (
@@ -574,10 +546,8 @@
           ) {
             title += " - " + giftItem.variant_title;
           }
-
-          // Update the content immediately
           infoEl.innerHTML = `Selected gift: <strong>${title}</strong>`;
-          infoEl.style.opacity = "1"; // Force visibility
+          infoEl.style.opacity = "1";
         }
       }
     }
@@ -589,7 +559,6 @@
         return;
       }
 
-      // Ensure a product is selected
       const selectedRadio = this.section.querySelector(
         'input[name^="gift-selection"]:checked'
       );
@@ -674,7 +643,6 @@
 
         // Check if gift already exists
         const existingGift = this.findGiftInCart();
-
         if (existingGift) {
           this.showNotification("Gift is already in cart", "warning");
           return;
@@ -714,7 +682,6 @@
             const error = await response.json();
             throw new Error(error.description || `HTTP ${response.status}`);
           }
-
           return response.json();
         });
 
@@ -751,14 +718,12 @@
       const spinner = button.querySelector(".loading-overlay__spinner");
 
       if (loading) {
-        // Store original text and change to loading text
         if (!button.dataset.originalText) {
           button.dataset.originalText = span.textContent;
         }
         span.textContent = "Dodawanie...";
         spinner?.classList.remove("hidden");
       } else {
-        // Restore original text
         if (button.dataset.originalText) {
           span.textContent = button.dataset.originalText;
         }
@@ -786,17 +751,13 @@
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                id: giftItem.key,
-                quantity: 0,
-              }),
+              body: JSON.stringify({ id: giftItem.key, quantity: 0 }),
             }
           );
 
           if (!response.ok) {
             throw new Error(`Failed to remove gift: ${response.status}`);
           }
-
           return response.json();
         });
 
@@ -829,7 +790,6 @@
     }
 
     updateCartUI(cartData) {
-      // Use cached selectors for better performance
       DOMCache.init();
 
       // Update cart count
@@ -849,7 +809,6 @@
             cartData.items_subtotal_price
           );
         }
-
         if (DOMCache.cartTotal) {
           DOMCache.cartTotal.textContent = this.formatMoney(
             cartData.total_price
@@ -865,11 +824,9 @@
       }
     }
 
-    // Enhanced money formatting - always use Shopify's format
+    // Enhanced money formatting
     formatMoney(cents) {
-      // Always try Shopify's money format first
       if (window.Shopify?.formatMoney) {
-        // Use theme money format if available, fallback to Shopify default
         const format =
           window.theme?.moneyFormat ||
           window.Shopify.money_format ||
@@ -877,7 +834,6 @@
         return window.Shopify.formatMoney(cents, format);
       }
 
-      // Enhanced fallback formatting
       try {
         const amount = (cents / 100).toFixed(2);
         const [whole, decimal] = amount.split(".");
@@ -918,31 +874,24 @@
       });
     }
 
-    // Enhanced cleanup method
     destroy() {
       Logger.info(`Destroying FreeGiftManager for section ${this.sectionId}`);
-
       this.monitoringActive = false;
       this.removeAllEventListeners();
-
-      // Clear any pending operations
       this.isProcessing = false;
-
-      // Release any held locks
       TransactionLock.release("add-gift");
       TransactionLock.release("remove-gift");
     }
   }
 
-  // Optimized Cart Protection Manager - Event-driven with enhanced gift detection
+  // Optimized Cart Protection Manager
   class CartGiftProtection {
     constructor() {
       this.isActive = false;
       this.cachedCart = null;
       this.lastProtectionRun = 0;
-      this.protectionDebounce = 500; // Reduce frequency
+      this.protectionDebounce = CONFIG.PROTECTION_DEBOUNCE;
       this.eventListeners = [];
-
       this.init();
     }
 
@@ -963,7 +912,6 @@
     }
 
     init() {
-      // Only initialize if we're on a cart-related page
       if (this.shouldActivate()) {
         Logger.debug("Activating cart gift protection");
         this.startProtection();
@@ -982,10 +930,7 @@
       if (this.isActive) return;
       this.isActive = true;
 
-      // Listen to cart events instead of polling
       this.attachProtectionListeners();
-
-      // Initial run
       this.protectGiftQuantities();
     }
 
@@ -1013,7 +958,6 @@
       }
     }
 
-    // Consolidated gift detection method
     isGiftItem(item, cartRow = null) {
       // Primary detection: cart data properties
       if (item && item.properties) {
@@ -1023,7 +967,7 @@
         );
       }
 
-      // Secondary detection: DOM attributes (if cart data not available)
+      // Secondary detection: DOM attributes
       if (cartRow) {
         return (
           cartRow.dataset.isGift === "true" ||
@@ -1038,7 +982,7 @@
     async protectGiftQuantities() {
       const now = Date.now();
       if (now - this.lastProtectionRun < this.protectionDebounce) {
-        return; // Skip if run too recently
+        return;
       }
       this.lastProtectionRun = now;
 
@@ -1063,12 +1007,9 @@
         // Reset all quantity controls first
         document.querySelectorAll(".quantity__input").forEach((input) => {
           const row = input.closest(".cart-item");
-
-          // Use consolidated detection method
           if (!this.isGiftItem(null, row)) {
             input.disabled = false;
             input.readOnly = false;
-
             const container = input.closest("quantity-input");
             if (container) {
               container.querySelectorAll("button").forEach((btn) => {
@@ -1136,12 +1077,11 @@
 
     document.querySelectorAll(".free-gift-threshold").forEach((section) => {
       if (section.giftManager) {
-        section.giftManager.destroy(); // Clean up existing
+        section.giftManager.destroy();
       }
       section.giftManager = new FreeGiftManager(section);
     });
 
-    // Initialize cart protection only if needed
     if (!cartProtection && document.querySelector(".free-gift-threshold")) {
       cartProtection = new CartGiftProtection();
     }
@@ -1173,14 +1113,11 @@
     }
   });
 
-  // Cleanup on page unload
   window.addEventListener("beforeunload", () => {
     Logger.info("Page unloading, cleaning up gift managers");
-
     if (cartProtection) {
       cartProtection.destroy();
     }
-
     document.querySelectorAll(".free-gift-threshold").forEach((section) => {
       if (section.giftManager) {
         section.giftManager.destroy();

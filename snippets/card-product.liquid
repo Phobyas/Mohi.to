@@ -1,4 +1,137 @@
-<!-- Product Card Component for Shopify Dawn Theme - Streetwear Store -->
+<!-- Enhanced Product Card Component for Shopify Dawn Theme - Modern Streetwear Store -->
+{% comment %}
+  Renders a product card for streetwear store
+
+  Accepts:
+  - card_product: {Object} Product Liquid object (optional)
+  - media_aspect_ratio: {String} Size of the product image card. Values are "square" and "portrait". Default is "portrait" (optional)
+  - show_secondary_image: {Boolean} Show the secondary image on hover. Default: true (optional)
+  - show_vendor: {Boolean} Show the product vendor. Default: false
+  - show_rating: {Boolean} Show the product rating. Default: false
+  - show_quick_add: {Boolean} Show the quick add button. Default: true
+  - section_id: {String} The ID of the section that contains this card.
+
+  Usage:
+  {% render 'card-product-streetwear', card_product: product %}
+{% endcomment %}
+
+<article class="streetwear-product-card" data-product-id="{{ card_product.id }}">
+  <a href="{{ card_product.url }}" class="streetwear-product-card__link">
+    <div class="streetwear-product-card__media">
+      {% if card_product.featured_image %}
+        <img 
+          class="streetwear-product-card__image"
+          src="{{ card_product.featured_image | image_url: width: 600 }}"
+          alt="{{ card_product.title | escape }}"
+          loading="lazy"
+          width="600"
+          height="{% if media_aspect_ratio == 'square' %}600{% else %}800{% endif %}"
+        >
+        
+        {% if show_secondary_image and card_product.images[1] %}
+          <img 
+            class="streetwear-product-card__image streetwear-product-card__image--secondary"
+            src="{{ card_product.images[1] | image_url: width: 600 }}"
+            alt="{{ card_product.title | escape }}"
+            loading="lazy"
+            width="600"
+            height="{% if media_aspect_ratio == 'square' %}600{% else %}800{% endif %}"
+          >
+        {% endif %}
+      {% else %}
+        {{ 'product-1' | placeholder_svg_tag: 'streetwear-product-card__image' }}
+      {% endif %}
+
+      <div class="streetwear-product-card__badges">
+        {% if card_product.available == false %}
+          <span class="streetwear-badge streetwear-badge--soldout">Sold Out</span>
+        {% elsif card_product.compare_at_price > card_product.price %}
+          <span class="streetwear-badge">
+            {% assign discount = card_product.compare_at_price | minus: card_product.price | times: 100 | divided_by: card_product.compare_at_price %}
+            -{{ discount }}% Off
+          </span>
+        {% endif %}
+        
+        {% if card_product.metafields.custom.is_new == true %}
+          <span class="streetwear-badge streetwear-badge--new">New</span>
+        {% endif %}
+        
+        {% if card_product.metafields.custom.is_limited == true %}
+          <span class="streetwear-badge streetwear-badge--limited">Limited</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="streetwear-product-card__info">
+      {% if show_vendor and card_product.vendor %}
+        <p class="streetwear-product-card__vendor">{{ card_product.vendor }}</p>
+      {% endif %}
+      
+      <h3 class="streetwear-product-card__title">{{ card_product.title }}</h3>
+      
+      <div class="streetwear-product-card__price-wrapper">
+        {% if card_product.compare_at_price > card_product.price %}
+          <span class="streetwear-price streetwear-price--sale">{{ card_product.price | money }}</span>
+          <span class="streetwear-price streetwear-price--compare">{{ card_product.compare_at_price | money }}</span>
+        {% else %}
+          <span class="streetwear-price">{{ card_product.price | money }}</span>
+        {% endif %}
+      </div>
+
+      {% if show_rating and card_product.metafields.reviews.rating.value != blank %}
+        {% assign rating = card_product.metafields.reviews.rating.value | round %}
+        {% assign rating_count = card_product.metafields.reviews.rating_count %}
+        <div class="streetwear-product-card__rating">
+          <div class="rating-stars">
+            {% for i in (1..5) %}
+              {% if i <= rating %}
+                <svg class="star" viewBox="0 0 24 24">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+              {% else %}
+                <svg class="star star--empty" viewBox="0 0 24 24">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <span class="rating-count">({{ rating_count }})</span>
+        </div>
+      {% endif %}
+
+      {% if card_product.options_with_values %}
+        {% for option in card_product.options_with_values %}
+          {% if option.name == 'Size' %}
+            <div class="streetwear-product-card__sizes">
+              {% for value in option.values limit: 5 %}
+                <div class="size-option" data-size="{{ value }}">
+                  {{ value }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    </div>
+  </a>
+</article>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Simplified product card interactions
+    const productCards = document.querySelectorAll('.streetwear-product-card');
+    
+    productCards.forEach(card => {
+      card.addEventListener('mouseenter', function() {
+        // Add any hover interactions here if needed
+      });
+      
+      card.addEventListener('mouseleave', function() {
+        // Remove hover interactions here if needed
+      });
+    });
+  });
+</script><!-- Enhanced Product Card Component for Shopify Dawn Theme - Modern Streetwear Store -->
 {% comment %}
   Renders a product card for streetwear store
 
@@ -20,37 +153,42 @@
     position: relative;
     height: 100%;
     background: #fff;
-    border: 2px solid transparent;
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border: 1px solid rgba(var(--color-foreground), 0.1);
+    border-radius: 0.8rem;
+    transition: all 0.3s ease;
     overflow: hidden;
     cursor: pointer;
   }
 
   .streetwear-product-card:hover {
     border-color: var(--color-primary-black, #0A0A0A);
-    transform: translateY(-10px) rotateZ(-1deg);
-    box-shadow: 
-      0 30px 60px rgba(0, 0, 0, 0.12),
-      0 10px 20px rgba(0, 0, 0, 0.08);
+    transform: translateY(-0.4rem);
+    box-shadow: 0 0.4rem 0.8rem rgba(0, 0, 0, 0.08);
+  }
+
+  .streetwear-product-card::before {
+    display: none;
   }
 
   .streetwear-product-card__media {
     position: relative;
     aspect-ratio: {% if media_aspect_ratio == 'square' %}1/1{% else %}3/4{% endif %};
     overflow: hidden;
-    background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: var(--border-radius, 0.8rem) var(--border-radius, 0.8rem) 0 0;
   }
 
   .streetwear-product-card__image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    filter: brightness(1) contrast(1);
   }
 
   .streetwear-product-card:hover .streetwear-product-card__image {
-    transform: scale(1.1) rotate(2deg);
-    filter: contrast(1.1);
+    transform: scale(1.08);
+    filter: brightness(1.05) contrast(1.1);
   }
 
   .streetwear-product-card__image--secondary {
@@ -61,7 +199,7 @@
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transition: opacity 0.6s ease;
+    transition: opacity 0.5s ease;
   }
 
   .streetwear-product-card:hover .streetwear-product-card__image--secondary {
@@ -70,23 +208,23 @@
 
   .streetwear-product-card__badges {
     position: absolute;
-    top: 1rem;
-    left: 1rem;
+    top: 1.2rem;
+    left: 1.2rem;
     z-index: 3;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
   }
 
   .streetwear-badge {
-    background: var(--color-primary-accent, #FF3333);
-    color: white;
-    padding: 0.4rem 1rem;
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 0.15em;
+    background: rgba(var(--color-foreground), 0.9);
+    color: rgb(var(--color-background));
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    display: inline-block;
+    border-radius: 0.4rem;
     animation: slideInLeft 0.5s ease;
   }
 
@@ -102,146 +240,122 @@
   }
 
   .streetwear-badge--soldout {
-    background: var(--color-primary-black, #0A0A0A);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
   }
 
   .streetwear-badge--new {
-    background: var(--color-neon-green, #00FF88);
-    color: var(--color-primary-black, #0A0A0A);
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
   }
 
   .streetwear-badge--limited {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    color: var(--color-primary-black, #0A0A0A);
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
   }
 
   .streetwear-product-card__overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
-    padding: 2rem 1rem 1rem;
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  }
-
-  .streetwear-product-card:hover .streetwear-product-card__overlay {
-    transform: translateY(0);
+    display: none;
   }
 
   .streetwear-product-card__quick-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    display: none;
   }
 
   .quick-action-btn {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 0.75rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  .quick-action-btn:hover {
-    background: white;
-    color: var(--color-primary-black, #0A0A0A);
-    transform: translateY(-2px);
+    display: none;
   }
 
   .quick-action-btn--primary {
-    background: var(--color-primary-accent, #FF3333);
-    border-color: var(--color-primary-accent, #FF3333);
+    display: none;
   }
 
   .streetwear-product-card__info {
-    padding: 1.25rem;
+    padding: 1.5rem;
     position: relative;
+    background: rgb(var(--color-background));
   }
 
   .streetwear-product-card__vendor {
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.2em;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--color-gray-500, #71717A);
-    margin: 0 0 0.5rem;
+    color: rgba(var(--color-foreground), 0.6);
+    margin: 0 0 0.6rem;
   }
 
   .streetwear-product-card__title {
-    font-family: var(--font-display, 'Bebas Neue', sans-serif);
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
+    font-family: var(--font-heading-family);
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.3;
     color: var(--color-primary-black, #0A0A0A);
-    margin: 0 0 0.75rem;
-    line-height: 1.1;
+    margin: 0 0 1rem;
     transition: color 0.3s ease;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .streetwear-product-card:hover .streetwear-product-card__title {
-    color: var(--color-primary-accent, #FF3333);
+    color: rgba(var(--color-foreground), 0.7);
   }
 
   .streetwear-product-card__price-wrapper {
     display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 0.8rem;
     flex-wrap: wrap;
+    margin-bottom: 0.8rem;
   }
 
   .streetwear-price {
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
-    font-size: 1.2rem;
-    font-weight: 800;
+    font-family: var(--font-heading-family);
+    font-size: 1.4rem;
+    font-weight: 700;
     color: var(--color-primary-black, #0A0A0A);
   }
 
   .streetwear-price--sale {
-    color: var(--color-primary-accent, #FF3333);
+    color: #dc2626;
   }
 
   .streetwear-price--compare {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 400;
-    color: var(--color-gray-400, #A1A1AA);
+    color: rgba(var(--color-foreground), 0.5);
     text-decoration: line-through;
   }
 
   .streetwear-product-card__rating {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
   }
 
   .rating-stars {
     display: flex;
-    gap: 0.1rem;
+    gap: 0.2rem;
   }
 
   .star {
     width: 14px;
     height: 14px;
-    fill: var(--color-cyber-yellow, #FFD700);
+    fill: #fdcb6e;
+    transition: fill 0.2s ease;
   }
 
   .star--empty {
-    fill: var(--color-gray-300, #D4D4D8);
+    fill: rgba(var(--color-foreground), 0.2);
   }
 
   .rating-count {
     font-size: 0.75rem;
-    color: var(--color-gray-500, #71717A);
+    color: rgba(var(--color-foreground), 0.6);
   }
 
   .streetwear-product-card__sizes {
@@ -252,10 +366,10 @@
   }
 
   .size-option {
-    width: 35px;
-    height: 35px;
-    border: 1px solid var(--color-gray-300, #D4D4D8);
-    background: white;
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(var(--color-foreground), 0.2);
+    background: rgba(255, 255, 255, 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -263,12 +377,15 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    border-radius: 0.4rem;
+    backdrop-filter: blur(10px);
   }
 
   .size-option:hover {
     border-color: var(--color-primary-black, #0A0A0A);
     background: var(--color-primary-black, #0A0A0A);
     color: white;
+    transform: scale(1.1);
   }
 
   .size-option--unavailable {
@@ -277,55 +394,82 @@
     pointer-events: none;
   }
 
-  /* Glitch Effect on Hover */
-  .streetwear-product-card__glitch {
+  .streetwear-product-card__loading-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    visibility: hidden;
+    transition: all 0.3s ease;
   }
 
-  .streetwear-product-card:hover .streetwear-product-card__glitch {
+  .streetwear-product-card--loading .streetwear-product-card__loading-overlay {
     opacity: 1;
-    animation: glitch 0.3s ease infinite;
+    visibility: visible;
   }
 
-  @keyframes glitch {
-    0%, 100% { transform: translate(0); }
-    20% { transform: translate(-2px, 2px); }
-    40% { transform: translate(-2px, -2px); }
-    60% { transform: translate(2px, 2px); }
-    80% { transform: translate(2px, -2px); }
+  .loading-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid rgba(var(--color-foreground), 0.1);
+    border-top: 3px solid var(--color-primary-accent, #667eea);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
   }
 
-  /* Loading State */
-  .streetwear-product-card--loading .streetwear-product-card__media {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 
-  @keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+  .streetwear-product-card__floating-action {
+    display: none;
   }
 
-  /* Mobile Optimizations */
   @media (max-width: 767px) {
-    .streetwear-product-card__title {
-      font-size: 1.25rem;
+    .streetwear-product-card {
+      border-radius: 0.6rem;
+    }
+    
+    .streetwear-product-card__media {
+      border-radius: 0.6rem 0.6rem 0 0;
     }
 
-    .streetwear-price {
+    .streetwear-product-card__title {
       font-size: 1.1rem;
     }
 
+    .streetwear-price {
+      font-size: 1.2rem;
+    }
+
     .streetwear-product-card__info {
-      padding: 1rem;
+      padding: 1.2rem;
+    }
+
+    .streetwear-product-card:hover {
+      transform: translateY(-0.2rem);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .streetwear-product-card,
+    .streetwear-product-card__image,
+    .streetwear-product-card__overlay,
+    .quick-action-btn,
+    .size-option {
+      transition: none;
+    }
+
+    .streetwear-product-card:hover {
+      transform: none;
     }
   }
 </style>
@@ -376,18 +520,7 @@
         {% endif %}
       </div>
 
-      {% if show_quick_add %}
-        <div class="streetwear-product-card__overlay">
-          <div class="streetwear-product-card__quick-actions">
-            <button class="quick-action-btn quick-action-btn--primary" data-add-to-cart="{{ card_product.selected_or_first_available_variant.id }}">
-              Add to Cart
-            </button>
-            <button class="quick-action-btn" data-quick-view="{{ card_product.id }}">
-              Quick View
-            </button>
-          </div>
-        </div>
-      {% endif %}
+      {% comment %} Wishlist and quick add functionality removed for simplicity {% endcomment %}
     </div>
 
     <div class="streetwear-product-card__info">
@@ -427,7 +560,6 @@
         </div>
       {% endif %}
 
-      {% comment %} Optional: Show available sizes {% endcomment %}
       {% if card_product.options_with_values %}
         {% for option in card_product.options_with_values %}
           {% if option.name == 'Size' %}
@@ -443,18 +575,22 @@
       {% endif %}
     </div>
 
-    <div class="streetwear-product-card__glitch"></div>
+    <div class="streetwear-product-card__loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
   </a>
 </article>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Quick Add to Cart functionality
     const quickAddButtons = document.querySelectorAll('[data-add-to-cart]');
     quickAddButtons.forEach(button => {
       button.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
+        
+        const productCard = this.closest('.streetwear-product-card');
+        productCard.classList.add('streetwear-product-card--loading');
         
         const variantId = this.dataset.addToCart;
         const formData = {
@@ -474,22 +610,21 @@
         })
         .then(response => response.json())
         .then(data => {
-          // Update cart drawer or notification
           document.dispatchEvent(new CustomEvent('cart:updated', { detail: data }));
           
-          // Visual feedback
           this.textContent = 'Added!';
           setTimeout(() => {
             this.textContent = 'Add to Cart';
+            productCard.classList.remove('streetwear-product-card--loading');
           }, 2000);
         })
         .catch(error => {
           console.error('Error adding to cart:', error);
+          productCard.classList.remove('streetwear-product-card--loading');
         });
       });
     });
 
-    // Quick View functionality
     const quickViewButtons = document.querySelectorAll('[data-quick-view]');
     quickViewButtons.forEach(button => {
       button.addEventListener('click', function(e) {
@@ -497,8 +632,23 @@
         e.stopPropagation();
         
         const productId = this.dataset.quickView;
-        // Trigger quick view modal
         document.dispatchEvent(new CustomEvent('quickview:open', { detail: { productId } }));
+      });
+    });
+
+    const wishlistButtons = document.querySelectorAll('[data-wishlist-toggle]');
+    wishlistButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const productId = this.dataset.wishlistToggle;
+        document.dispatchEvent(new CustomEvent('wishlist:toggle', { detail: { productId } }));
+        
+        this.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+          this.style.transform = 'scale(1)';
+        }, 200);
       });
     });
   });
