@@ -46,8 +46,8 @@
           "type": "gift_product",
           "settings": {
             "product": "labubu-macarons-latte-copy",
-            "custom_title": "",
-            "description": "",
+            "custom_title": "test",
+            "description": "test",
             "featured": false,
             "limit_variants": false,
             "allowed_variants": "",
