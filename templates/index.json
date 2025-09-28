@@ -16,7 +16,7 @@
           "type": "heading",
           "disabled": true,
           "settings": {
-            "heading": "Kolekcja New Balance",
+            "heading": "Labubu!!!",
             "heading_size": "h0"
           }
         },
@@ -24,7 +24,7 @@
           "type": "buttons",
           "disabled": true,
           "settings": {
-            "button_label_1": "Sprawdź kolekcje!",
+            "button_label_1": "Sprawdź Labubu!!!",
             "button_link_1": "shopify://collections/all",
             "button_style_secondary_1": true,
             "button_label_2": "",
