@@ -267,6 +267,27 @@
     }
   },
   "sections": {
+    "free_gift": {
+      "threshold_reached": "Congratulations! You've reached the threshold for a free gift!",
+      "choose_gift": "Choose your free gift!",
+      "selected_gift": "Selected gift:",
+      "ready_to_add": "Ready to add to cart",
+      "choose_one_gift": "Choose one free gift:",
+      "gift_selection_subtitle": "You can select one of the available gift products",
+      "variants_available": {
+        "one": "{{ count }} variant available",
+        "other": "{{ count }} variants available"
+      },
+      "select_variant": "Select variant",
+      "choose_variant": "Choose variant...",
+      "no_products_available": "No available products. Add products using blocks in the theme editor.",
+      "showing_maximum_products": {
+        "one": "Showing maximum {{ count }} gift product",
+        "other": "Showing maximum {{ count }} gift products"
+      },
+      "selected_gift_info": "Selected gift: <strong>{{ gift }}</strong>"
+    },
+
     "announcements": {
       "previous_announcement": "Previous announcement",
       "next_announcement": "Next announcement",

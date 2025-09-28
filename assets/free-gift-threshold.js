@@ -1,5 +1,5 @@
 /**
- * Free Gift Threshold Manager - Dawn Theme Compatible with Fixed Money Format
+ * Free Gift Threshold Manager - Optimized and Bug-proof Version
  * File: assets/free-gift-threshold.js
  */
 
@@ -12,49 +12,66 @@
       this.selectedGift = null;
       this.isProcessing = false;
       this.cartData = null;
+      this.lastCartTotal = 0;
+      this.lastUpdateTime = 0;
+      this.updateDebounceTime = 100; // Prevent excessive updates
+      this.monitoringActive = false;
 
       this.init();
     }
 
     async init() {
-      // Get initial cart state
-      await this.fetchCart();
+      try {
+        // Get initial cart state
+        await this.fetchCart();
 
-      // Set up event listeners
-      this.attachEventListeners();
+        // Set up event listeners
+        this.attachEventListeners();
 
-      // Monitor cart changes
-      this.monitorCartChanges();
+        // Start monitoring (only once)
+        if (!this.monitoringActive) {
+          this.startMonitoring();
+        }
 
-      // Initial UI update
-      this.updateUI();
+        // Initial UI update
+        this.updateUI();
+      } catch (error) {
+        console.error("Failed to initialize gift manager:", error);
+      }
     }
 
     attachEventListeners() {
-      // Radio button selection for products
-      this.section.addEventListener("change", (e) => {
-        if (e.target.classList.contains("gift-radio")) {
-          this.selectProductByRadio(e.target);
-        }
+      // Remove existing listeners to prevent duplicates
+      this.section.removeEventListener("change", this.handleSectionChange);
 
-        // Variant selection
-        if (e.target.classList.contains("gift-variant-select")) {
-          this.selectVariant(e.target);
-        }
-      });
+      // Bind context and store reference
+      this.handleSectionChange = this.handleSectionChange.bind(this);
+      this.section.addEventListener("change", this.handleSectionChange);
 
-      // Add gift button
+      // Add gift button (remove existing first)
       const addBtn = this.section.querySelector(".gift-add-btn");
       if (addBtn) {
-        addBtn.addEventListener("click", () => this.addGiftToCart());
+        addBtn.removeEventListener("click", this.handleAddGift);
+        this.handleAddGift = this.handleAddGift.bind(this);
+        addBtn.addEventListener("click", this.handleAddGift);
       }
+    }
+
+    handleSectionChange(e) {
+      if (e.target.classList.contains("gift-radio")) {
+        this.selectProductByRadio(e.target);
+      } else if (e.target.classList.contains("gift-variant-select")) {
+        this.selectVariant(e.target);
+      }
+    }
+
+    handleAddGift() {
+      this.addGiftToCart();
     }
 
     selectProductByRadio(radio) {
       const productCard = radio.closest(".gift-product-card");
       const productId = productCard.dataset.productId;
-
-      console.log("Product selected:", productId);
 
       // Hide all variant selections first
       this.section
@@ -68,7 +85,6 @@
         ".gift-variant-selection"
       );
       if (variantSelection) {
-        console.log("Product has variants, showing selection");
         variantSelection.style.display = "block";
 
         // Reset variant selection
@@ -79,30 +95,22 @@
           variantSelect.value = "";
         }
 
-        // Don't proceed with gift selection until variant is chosen
+        // Don't proceed until variant is chosen
         this.selectedGift = null;
         this.hideSelectedGift();
         return;
       }
 
-      // For products with single variant, use data attributes for immediate selection
+      // For products with single variant, use data attributes
       const productTitle =
         productCard.dataset.productTitle ||
         productCard.querySelector(".gift-card-heading").textContent.trim();
       const productImage =
         productCard.dataset.productImage ||
-        (productCard.querySelector(".gift-card-media img")
-          ? productCard.querySelector(".gift-card-media img").src
-          : "");
+        productCard.querySelector(".gift-card-media img")?.src ||
+        "";
       const firstVariantId = productCard.dataset.firstVariantId;
       const firstVariantPrice = productCard.dataset.firstVariantPrice;
-
-      console.log("Using data attributes:", {
-        title: productTitle,
-        image: productImage,
-        variantId: firstVariantId,
-        price: firstVariantPrice,
-      });
 
       if (firstVariantId && firstVariantPrice) {
         this.selectedGift = {
@@ -112,36 +120,24 @@
           image: productImage,
         };
 
-        console.log(
-          "Selected gift set from data attributes:",
-          this.selectedGift
-        );
         this.showSelectedGift();
       } else {
-        console.error("Missing variant data in product card attributes");
-
-        // Fallback to API call if data attributes are missing
+        // Fallback to API call
         this.getProductVariants(productId)
           .then((product) => {
-            if (product && product.variants && product.variants.length > 0) {
+            if (product?.variants?.length > 0) {
               const firstVariant = product.variants[0];
-
               this.selectedGift = {
                 variantId: firstVariant.id,
                 title: productTitle,
                 price: firstVariant.price,
                 image: productImage,
               };
-
-              console.log(
-                "Selected gift set from API fallback:",
-                this.selectedGift
-              );
               this.showSelectedGift();
             }
           })
           .catch((error) => {
-            console.error("API fallback also failed:", error);
+            console.error("Failed to fetch product variants:", error);
           });
       }
     }
@@ -149,6 +145,7 @@
     async getProductVariants(productId) {
       try {
         const response = await fetch(`/products/${productId}.js`);
+        if (!response.ok) throw new Error("Failed to fetch product");
         return await response.json();
       } catch (error) {
         console.error("Error fetching product variants:", error);
@@ -156,105 +153,73 @@
       }
     }
 
-    monitorCartChanges() {
+    startMonitoring() {
+      if (this.monitoringActive) return;
+      this.monitoringActive = true;
+
       // Listen to Dawn theme cart events if available
       if (
         typeof subscribe !== "undefined" &&
         typeof PUB_SUB_EVENTS !== "undefined"
       ) {
-        subscribe(PUB_SUB_EVENTS.cartUpdate, async (event) => {
-          // Skip if this update was triggered by our gift manager
-          if (
-            event.source === "free-gift-add" ||
-            event.source === "free-gift-remove"
-          ) {
-            return;
-          }
-
-          // Fetch fresh cart data and update UI
-          await this.fetchCart();
-          this.updateUI();
-        });
+        subscribe(PUB_SUB_EVENTS.cartUpdate, this.handleCartUpdate.bind(this));
       }
 
-      // Intercept cart API calls
-      const originalFetch = window.fetch;
-      window.fetch = async (...args) => {
-        const response = await originalFetch.apply(window, args);
-        const url = args[0];
+      // Debounced polling as backup
+      setInterval(() => {
+        this.debouncedCartCheck();
+      }, 2000);
+    }
 
-        if (
-          typeof url === "string" &&
-          (url.includes("/cart/add") ||
-            url.includes("/cart/update") ||
-            url.includes("/cart/change") ||
-            url.includes("/cart/clear"))
-        ) {
-          // Skip if it's our own request
-          const body = args[1]?.body;
-          if (body && body.includes("_is_free_gift")) {
-            return response;
-          }
+    async handleCartUpdate(event) {
+      // Skip if this update was triggered by our gift manager
+      if (
+        event?.source === "free-gift-add" ||
+        event?.source === "free-gift-remove"
+      ) {
+        return;
+      }
 
-          // Wait a bit for cart to update, then refresh UI
-          setTimeout(async () => {
-            await this.fetchCart();
-            this.updateUI();
-          }, 200);
-        }
+      await this.debouncedUpdate();
+    }
 
-        return response;
-      };
+    async debouncedUpdate() {
+      const now = Date.now();
+      if (now - this.lastUpdateTime < this.updateDebounceTime) {
+        return; // Skip if updated too recently
+      }
+      this.lastUpdateTime = now;
 
-      // Listen for quantity changes in cart
-      document.addEventListener("change", async (e) => {
-        if (e.target.matches('[name="updates[]"], .quantity__input')) {
-          setTimeout(async () => {
-            await this.fetchCart();
-            this.updateUI();
-          }, 300);
-        }
-      });
+      try {
+        await this.fetchCart();
+        this.updateUI();
+      } catch (error) {
+        console.error("Failed to update cart:", error);
+      }
+    }
 
-      // Listen for remove button clicks
-      document.addEventListener("click", async (e) => {
-        if (
-          e.target.closest(
-            'cart-remove-button, [href*="/cart/change"], .cart-item__remove'
-          )
-        ) {
-          setTimeout(async () => {
-            await this.fetchCart();
-            this.updateUI();
-          }, 300);
-        }
-      });
+    async debouncedCartCheck() {
+      try {
+        const response = await fetch(window.Shopify.routes.root + "cart.js");
+        const currentCart = await response.json();
 
-      // Additional monitoring for cart changes
-      let lastCartTotal = this.cartData?.total_price || 0;
-
-      // Poll for cart changes every 2 seconds as backup
-      setInterval(async () => {
-        const currentCart = await this.fetchCart();
-        if (currentCart && currentCart.total_price !== lastCartTotal) {
-          lastCartTotal = currentCart.total_price;
+        if (currentCart.total_price !== this.lastCartTotal) {
+          this.lastCartTotal = currentCart.total_price;
+          this.cartData = currentCart;
           this.updateUI();
         }
-      }, 2000);
+      } catch (error) {
+        // Silent fail for polling
+      }
     }
 
     async fetchCart() {
       try {
         const response = await fetch(window.Shopify.routes.root + "cart.js");
+        if (!response.ok) throw new Error("Failed to fetch cart");
+
         this.cartData = await response.json();
-
-        // Store globally for quantity protection
-        window.cartData = this.cartData;
-
-        // Protect quantities after cart fetch
-        setTimeout(() => {
-          window.protectGiftQuantities && window.protectGiftQuantities();
-        }, 100);
+        this.lastCartTotal = this.cartData.total_price;
 
         return this.cartData;
       } catch (error) {
@@ -277,13 +242,10 @@
         (item) => item.properties && item.properties._is_free_gift === "true"
       );
       const hasGift = !!giftItem;
-
-      // Determine current state
       const thresholdMet = this.cartData.total_price >= this.threshold;
 
       // Check if gift needs to be removed (has gift but threshold not met)
       if (hasGift && !thresholdMet) {
-        // Don't update UI yet, wait for gift removal
         this.removeGift();
         return;
       }
@@ -320,62 +282,41 @@
         100
       );
 
-      console.log("UpdateProgress called:", {
-        cartTotal: this.cartData.total_price,
-        threshold: this.threshold,
-        percentage: percentage,
-        sectionId: this.sectionId,
-      });
-
-      // Update gift message with remaining amount using consistent formatting
+      // Update gift message
       const messageEl = this.section.querySelector(
         ".gift-state--progress .gift-message"
       );
       if (messageEl) {
         if (this.cartData.total_price === 0) {
           messageEl.textContent =
-            "Koszyk jest pusty. Dodaj produkty aby otrzymać darmowy prezent!";
+            "Your cart is empty. Add products to receive a free gift!";
         } else if (remaining > 0) {
-          messageEl.innerHTML = `Dodaj produkty za <span class="gift-amount">${this.formatMoney(
+          messageEl.innerHTML = `Add products worth <span class="gift-amount">${this.formatMoney(
             remaining
-          )}</span> aby otrzymać darmowy prezent!`;
+          )}</span> to receive a free gift!`;
         } else {
           messageEl.textContent =
-            "Gratulacje! Osiągnąłeś próg dla darmowego prezentu!";
+            "Congratulations! You've reached the threshold for a free gift!";
         }
       }
 
-      // Update progress bar fill - NEW TARGETING
+      // Update progress bar
       const progressFill = this.section.querySelector(
         `#progress-fill-${this.sectionId}`
       );
       if (progressFill) {
-        console.log(
-          "Found progress fill element, updating to:",
-          percentage + "%"
-        );
         progressFill.style.width = percentage + "%";
         progressFill.setAttribute("data-progress", percentage.toFixed(1));
-      } else {
-        console.error(
-          "Progress fill element not found:",
-          `#progress-fill-${this.sectionId}`
-        );
       }
 
-      // Update current amount display
+      // Update amounts
       const currentEl = this.section.querySelector(
         `#progress-current-${this.sectionId}`
       );
       if (currentEl) {
         currentEl.textContent = this.formatMoney(this.cartData.total_price);
-        console.log(
-          "Updated current amount:",
-          this.formatMoney(this.cartData.total_price)
-        );
       }
 
-      // Update target amount display
       const targetEl = this.section.querySelector(
         `#progress-target-${this.sectionId}`
       );
@@ -383,13 +324,11 @@
         targetEl.textContent = this.formatMoney(this.threshold);
       }
 
-      // Update percentage text
       const percentageEl = this.section.querySelector(
         `#progress-percent-${this.sectionId}`
       );
       if (percentageEl) {
         percentageEl.textContent = Math.round(percentage);
-        console.log("Updated percentage text:", Math.round(percentage) + "%");
       }
     }
 
@@ -400,7 +339,9 @@
 
       if (giftItem) {
         const infoEl = this.section.querySelector(".gift-selected-info-text");
-        if (infoEl) {
+        const successState = this.section.querySelector(".gift-state--success");
+
+        if (infoEl && successState) {
           let title = giftItem.product_title;
           if (
             giftItem.variant_title &&
@@ -408,30 +349,17 @@
           ) {
             title += " - " + giftItem.variant_title;
           }
-          infoEl.innerHTML = `Wybrany prezent: <strong>${title}</strong>`;
+
+          // Update the content
+          infoEl.innerHTML = `Selected gift: <strong>${title}</strong>`;
+
+          // Ensure smooth appearance without flash
+          requestAnimationFrame(() => {
+            successState.style.visibility = "visible";
+            successState.classList.add("loaded");
+          });
         }
       }
-    }
-
-    selectProduct(button) {
-      // Clear previous selections
-      this.section.querySelectorAll(".gift-product-card").forEach((card) => {
-        card.classList.remove("selected");
-      });
-
-      // Mark as selected
-      const card = button.closest(".gift-product-card");
-      card.classList.add("selected");
-
-      // Store selection
-      this.selectedGift = {
-        variantId: button.dataset.variantId,
-        title: button.dataset.title,
-        price: button.dataset.price,
-        image: button.dataset.image,
-      };
-
-      this.showSelectedGift();
     }
 
     selectVariant(select) {
@@ -441,7 +369,7 @@
         return;
       }
 
-      // Get the selected radio button to ensure a product is selected
+      // Ensure a product is selected
       const selectedRadio = this.section.querySelector(
         'input[name^="gift-selection"]:checked'
       );
@@ -456,7 +384,6 @@
         .querySelector(".gift-card-heading")
         .textContent.trim();
 
-      // Store selection
       this.selectedGift = {
         variantId: select.value,
         title:
@@ -482,8 +409,6 @@
       const selectedDiv = this.section.querySelector(".gift-selected");
       if (!selectedDiv || !this.selectedGift) return;
 
-      console.log("Showing selected gift:", this.selectedGift);
-
       // Update image
       const img = selectedDiv.querySelector(".gift-selected-image");
       if (img && this.selectedGift.image) {
@@ -497,19 +422,10 @@
         titleEl.textContent = this.selectedGift.title;
       }
 
-      // Show the selected div with animation
+      // Show with smooth animation
       selectedDiv.style.display = "block";
-
-      // Force a reflow to ensure the display change takes effect
-      selectedDiv.offsetHeight;
-
-      // Scroll into view smoothly
-      selectedDiv.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-
-      console.log("Selected gift display should now be visible");
+      selectedDiv.offsetHeight; // Force reflow
+      selectedDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     async addGiftToCart() {
@@ -518,7 +434,10 @@
       // Security check - verify threshold is met
       await this.fetchCart();
       if (this.cartData.total_price < this.threshold) {
-        this.showNotification("Koszyk nie spełnia wymaganego progu", "error");
+        this.showNotification(
+          "Cart does not meet the required threshold",
+          "error"
+        );
         this.updateUI();
         return;
       }
@@ -529,22 +448,14 @@
       );
 
       if (existingGift) {
-        this.showNotification("Prezent jest już w koszyku", "warning");
+        this.showNotification("Gift is already in cart", "warning");
         return;
       }
 
       const button = this.section.querySelector(".gift-add-btn");
       if (!button) return;
 
-      this.isProcessing = true;
-      button.setAttribute("aria-busy", "true");
-      button.classList.add("loading");
-
-      // Show spinner
-      const spinner = button.querySelector(".loading-overlay__spinner");
-      if (spinner) {
-        spinner.classList.remove("hidden");
-      }
+      this.setButtonLoading(button, true);
 
       try {
         const formData = {
@@ -556,6 +467,7 @@
                 _is_free_gift: "true",
                 _original_price: this.selectedGift.price,
                 _threshold_required: this.threshold.toString(),
+                _disable_link: "true",
               },
             },
           ],
@@ -565,26 +477,23 @@
           window.Shopify.routes.root + "cart/add.js",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(formData),
           }
         );
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.description || "Błąd dodawania prezentu");
+          throw new Error(error.description || "Error adding gift");
         }
 
-        // Show success
-        this.showNotification("Prezent został dodany do koszyka!", "success");
+        this.showNotification("Gift has been added to cart!", "success");
 
-        // Refresh cart
+        // Refresh and update
         await this.fetchCart();
         this.updateUI();
 
-        // Trigger cart update event if available
+        // Trigger cart update event
         if (
           typeof publish !== "undefined" &&
           typeof PUB_SUB_EVENTS !== "undefined"
@@ -593,19 +502,20 @@
         }
       } catch (error) {
         console.error("Error adding gift:", error);
-        this.showNotification(
-          "Nie można dodać prezentu: " + error.message,
-          "error"
-        );
+        this.showNotification("Cannot add gift: " + error.message, "error");
       } finally {
-        this.isProcessing = false;
-        button.setAttribute("aria-busy", "false");
-        button.classList.remove("loading");
+        this.setButtonLoading(button, false);
+      }
+    }
 
-        // Hide spinner
-        if (spinner) {
-          spinner.classList.add("hidden");
-        }
+    setButtonLoading(button, loading) {
+      this.isProcessing = loading;
+      button.setAttribute("aria-busy", loading.toString());
+      button.classList.toggle("loading", loading);
+
+      const spinner = button.querySelector(".loading-overlay__spinner");
+      if (spinner) {
+        spinner.classList.toggle("hidden", !loading);
       }
     }
 
@@ -616,7 +526,6 @@
 
       if (!giftItem) return;
 
-      // Show loading state on section
       this.section.classList.add("gift-threshold-loading");
 
       try {
@@ -624,9 +533,7 @@
           window.Shopify.routes.root + "cart/change.js",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               id: giftItem.key,
               quantity: 0,
@@ -639,22 +546,14 @@
         }
 
         const updatedCart = await response.json();
-
-        this.showNotification(
-          "Prezent został usunięty (koszyk poniżej progu)",
-          "warning"
-        );
-
-        // Update local cart data
         this.cartData = updatedCart;
+        this.lastCartTotal = updatedCart.total_price;
 
-        // Update cart UI without page refresh
+        this.showNotification("Gift removed (cart below threshold)", "warning");
         this.updateCartUI(updatedCart);
-
-        // Update gift section UI
         this.updateUI();
 
-        // Trigger Dawn theme cart update if available
+        // Trigger cart update event
         if (
           typeof publish !== "undefined" &&
           typeof PUB_SUB_EVENTS !== "undefined"
@@ -666,14 +565,14 @@
         }
       } catch (error) {
         console.error("Error removing gift:", error);
-        this.showNotification("Błąd podczas usuwania prezentu", "error");
+        this.showNotification("Error removing gift", "error");
       } finally {
         this.section.classList.remove("gift-threshold-loading");
       }
     }
 
     updateCartUI(cartData) {
-      // Update cart count in header if exists
+      // Update cart count
       const cartCount = document.querySelector(".cart-count-bubble");
       if (cartCount) {
         const count = cartCount.querySelector('span[aria-hidden="true"]');
@@ -682,9 +581,8 @@
         }
       }
 
-      // Update cart items if on cart page
+      // Update cart totals if on cart page
       if (window.location.pathname.includes("/cart")) {
-        // Update cart totals
         const cartSubtotal = document.querySelector(".totals__subtotal-value");
         if (cartSubtotal) {
           cartSubtotal.textContent = this.formatMoney(
@@ -696,82 +594,28 @@
         if (cartTotal) {
           cartTotal.textContent = this.formatMoney(cartData.total_price);
         }
-
-        // Remove gift item row from cart table
-        const giftItem = cartData.items.find(
-          (item) => item.properties && item.properties._is_free_gift === "true"
-        );
-
-        if (!giftItem) {
-          // Gift was removed, find and remove its row
-          const cartRows = document.querySelectorAll(".cart-item");
-          cartRows.forEach((row) => {
-            const titleElement = row.querySelector(".cart-item__name");
-            if (titleElement && titleElement.textContent.includes("PREZENT:")) {
-              row.style.opacity = "0";
-              row.style.transition = "opacity 0.3s ease";
-              setTimeout(() => {
-                row.remove();
-                // Update row indices
-                this.updateCartRowIndices();
-              }, 300);
-            }
-          });
-        }
       }
 
       // Update cart drawer if open
       const cartDrawer = document.querySelector("cart-drawer");
-      if (cartDrawer && cartDrawer.classList.contains("active")) {
-        // Trigger cart drawer refresh
+      if (cartDrawer?.classList.contains("active")) {
         const cartDrawerItems = document.querySelector("cart-drawer-items");
-        if (cartDrawerItems && cartDrawerItems.onCartUpdate) {
+        if (cartDrawerItems?.onCartUpdate) {
           cartDrawerItems.onCartUpdate();
         }
       }
     }
 
-    updateCartRowIndices() {
-      // Re-index cart items after removal
-      const cartItems = document.querySelectorAll(".cart-item");
-      cartItems.forEach((item, index) => {
-        const newIndex = index + 1;
-        // Update IDs
-        if (item.id) {
-          item.id = item.id.replace(/\d+$/, newIndex);
-        }
-        // Update quantity input data-index
-        const quantityInput = item.querySelector(".quantity__input");
-        if (quantityInput) {
-          quantityInput.dataset.index = newIndex;
-        }
-        // Update remove button data-index
-        const removeButton = item.querySelector("cart-remove-button");
-        if (removeButton) {
-          removeButton.dataset.index = newIndex;
-        }
-      });
-    }
-
-    // Fixed money formatting to match theme format (1.260,00 zł)
     formatMoney(cents) {
-      // Use Shopify's money format if available with theme format
-      if (
-        window.Shopify &&
-        window.Shopify.formatMoney &&
-        window.theme?.moneyFormat
-      ) {
+      // Use Shopify's money format if available
+      if (window.Shopify?.formatMoney && window.theme?.moneyFormat) {
         return window.Shopify.formatMoney(cents, window.theme.moneyFormat);
       }
 
-      // Fallback formatting that matches your theme: 1.260,00 zł
+      // Fallback formatting
       const amount = (cents / 100).toFixed(2);
       const [whole, decimal] = amount.split(".");
-
-      // Add thousands separators (dots)
       const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-      // Use comma for decimal separator and add currency
       return `${formattedWhole},${decimal} zł`;
     }
 
@@ -801,28 +645,53 @@
         setTimeout(() => notification.remove(), 200);
       });
     }
+
+    // Cleanup method
+    destroy() {
+      this.monitoringActive = false;
+      this.section.removeEventListener("change", this.handleSectionChange);
+      const addBtn = this.section.querySelector(".gift-add-btn");
+      if (addBtn) {
+        addBtn.removeEventListener("click", this.handleAddGift);
+      }
+    }
   }
 
-  // Simple function to disable quantity controls for gift items
+  // Global functions for quantity protection
   window.protectGiftQuantities = function () {
+    // Fetch current cart to get accurate data
     fetch(window.Shopify.routes.root + "cart.js")
       .then((response) => response.json())
       .then((cart) => {
+        // First, reset all quantity controls to enabled state
+        document.querySelectorAll(".quantity__input").forEach((input) => {
+          input.disabled = false;
+          input.readOnly = false;
+
+          const container = input.closest("quantity-input");
+          if (container) {
+            container.querySelectorAll("button").forEach((btn) => {
+              btn.disabled = false;
+              btn.style.opacity = "";
+              btn.style.cursor = "";
+            });
+          }
+        });
+
+        // Then, only disable gift items
         cart.items.forEach((item, index) => {
           if (item.properties && item.properties._is_free_gift === "true") {
-            // Find quantity input by variant ID or index
-            let input =
+            // Find the specific input for this gift item
+            const input =
               document.querySelector(
                 `input[data-quantity-variant-id="${item.variant_id}"]`
               ) || document.querySelector(`#Quantity-${index + 1}`);
 
             if (input) {
-              // Disable input
               input.disabled = true;
               input.readOnly = true;
               input.value = 1;
 
-              // Disable buttons in the same container
               const container = input.closest("quantity-input");
               if (container) {
                 container.querySelectorAll("button").forEach((btn) => {
@@ -836,42 +705,47 @@
         });
       })
       .catch((error) => {
-        console.error("Error protecting gift quantities:", error);
+        console.error("Error in protectGiftQuantities:", error);
       });
   };
 
-  // Run on load and after updates
-  document.addEventListener("DOMContentLoaded", window.protectGiftQuantities);
-  setInterval(window.protectGiftQuantities, 1000);
-
-  // Initialize when DOM is ready
+  // Initialize gift managers
   function initGiftThreshold() {
     document.querySelectorAll(".free-gift-threshold").forEach((section) => {
-      if (!section.giftManager) {
-        section.giftManager = new FreeGiftManager(section);
+      if (section.giftManager) {
+        section.giftManager.destroy(); // Clean up existing
       }
+      section.giftManager = new FreeGiftManager(section);
     });
   }
 
+  // DOM ready initialization
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initGiftThreshold);
   } else {
     initGiftThreshold();
   }
 
-  // Re-initialize on Shopify section reloads
+  // Shopify section events
   document.addEventListener("shopify:section:load", (event) => {
     const section = event.target.querySelector(".free-gift-threshold");
     if (section) {
+      if (section.giftManager) {
+        section.giftManager.destroy();
+      }
       section.giftManager = new FreeGiftManager(section);
     }
   });
 
-  // Re-initialize on Shopify block select/deselect
   document.addEventListener("shopify:block:select", (event) => {
     const section = event.target.closest(".free-gift-threshold");
     if (section && !section.giftManager) {
       section.giftManager = new FreeGiftManager(section);
     }
   });
+
+  // Run protection functions periodically
+  setInterval(() => {
+    window.protectGiftQuantities();
+  }, 2000);
 })();

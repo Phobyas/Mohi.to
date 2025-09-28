@@ -67,11 +67,11 @@
       
       <div class="gift-message" role="status" aria-live="polite">
         {% if cart.total_price == 0 %}
-          Your cart is empty. Add products to receive a free gift!
+          {{ section.settings.empty_cart_message }}
         {% elsif remaining > 0 %}
           {{ section.settings.progress_message | replace: '[amount]', '<span class="gift-amount">' | append: remaining | money | append: '</span>' }}
         {% else %}
-          Congratulations! You've reached the threshold for a free gift!
+          {{ 'sections.free_gift.threshold_reached' | t }}
         {% endif %}
       </div>
       
@@ -106,7 +106,7 @@
         <svg class="icon icon-star" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
-        <h3 class="gift-heading h4">Choose your free gift!</h3>
+        <h3 class="gift-heading h4">{{ 'sections.free_gift.choose_gift' | t }}</h3>
       </div>
       
       <div class="gift-message gift-message--success">
@@ -117,7 +117,7 @@
       <div class="gift-selected" id="gift-selected-{{ section.id }}" style="display: none;">
         <div class="gift-selected-card">
           <div class="gift-selected-header">
-            <h4 class="gift-selected-heading">Selected gift:</h4>
+            <h4 class="gift-selected-heading">{{ 'sections.free_gift.selected_gift' | t }}</h4>
           </div>
           <div class="gift-selected-info">
             <div class="gift-selected-media">
@@ -125,7 +125,7 @@
             </div>
             <div class="gift-selected-details">
               <h5 class="gift-selected-title"></h5>
-              <p class="gift-selected-label caption">Ready to add to cart</p>
+              <p class="gift-selected-label caption">{{ 'sections.free_gift.ready_to_add' | t }}</p>
             </div>
           </div>
           <div class="gift-selected-actions">
@@ -144,8 +144,8 @@
       <!-- Gift Products Grid -->
       <div class="gift-products-wrapper">
         <div class="gift-selection-header">
-          <h4 class="gift-selection-title">Choose one free gift:</h4>
-          <p class="gift-selection-subtitle">You can select one of the available gift products</p>
+          <h4 class="gift-selection-title">{{ 'sections.free_gift.choose_one_gift' | t }}</h4>
+          <p class="gift-selection-subtitle">{{ 'sections.free_gift.gift_selection_subtitle' | t }}</p>
         </div>
         
         <ul class="gift-products-grid grid grid--2-col-tablet-down grid--4-col-desktop" role="list">
@@ -192,7 +192,7 @@
                             
                             {%- if product.variants.size > 1 -%}
                               <div class="gift-variant-info">
-                                <span class="variant-count">{{ product.variants.size }} variants available</span>
+                                <span class="variant-count">{{ 'sections.free_gift.variants_available' | t: count: product.variants.size }}</span>
                               </div>
                             {%- endif -%}
                             
@@ -208,8 +208,8 @@
                       {%- if product.variants.size > 1 -%}
                         <div class="gift-variant-selection" style="display: none;">
                           <div class="gift-select-wrapper">
-                            <select class="gift-variant-select" data-product-id="{{ product.id }}" aria-label="Select variant">
-                              <option value="">Choose variant...</option>
+                            <select class="gift-variant-select" data-product-id="{{ product.id }}" aria-label="{{ 'sections.free_gift.select_variant' | t }}">
+                              <option value="">{{ 'sections.free_gift.choose_variant' | t }}</option>
                               {%- for variant in product.variants -%}
                                 {%- if variant.available -%}
                                   <option value="{{ variant.id }}" 
@@ -237,20 +237,20 @@
           {%- unless has_products -%}
             <li class="gift-products-empty grid__item">
               <p class="caption-large">
-                No available products. Add products using blocks in the theme editor.
+                {{ 'sections.free_gift.no_products_available' | t }}
               </p>
             </li>
           {%- endunless -%}
         </ul>
         
         {%- if product_count >= 5 -%}
-          <p class="gift-products-limit caption">Showing maximum 5 gift products</p>
+          <p class="gift-products-limit caption">{{ 'sections.free_gift.showing_maximum_products' | t: count: 5 }}</p>
         {%- endif -%}
       </div>
     </div>
 
     <!-- Success State -->
-    <div class="gift-state gift-state--success" data-state="success" style="{% if has_gift %}display: block;{% else %}display: none;{% endif %}">
+    <div class="gift-state gift-state--success" data-state="success" style="{% if has_gift %}display: block;{% else %}display: none;{% endif %}visibility: hidden;">
       <div class="gift-header gift-header--complete">
         <svg class="icon icon-checkmark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 6L9 17l-5-5"/>
@@ -262,7 +262,7 @@
         <div class="gift-success-message">
           <p class="gift-success-text">{{ section.settings.success_message }}</p>
           {%- if selected_gift_info != blank -%}
-            <p class="gift-selected-info-text caption">Selected gift: <strong>{{ selected_gift_info }}</strong></p>
+            <p class="gift-selected-info-text caption">{{ 'sections.free_gift.selected_gift_info' | t: gift: selected_gift_info }}</p>
           {%- endif -%}
         </div>
       </div>
@@ -324,6 +324,19 @@
     line-height: calc(1 + 0.8 / var(--font-body-scale));
     color: rgba(var(--color-foreground), 0.75);
     margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeInMessage 0.4s ease-out 0.1s forwards;
+  }
+
+  @keyframes fadeInMessage {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   
   .gift-message--success {
@@ -335,6 +348,19 @@
     color: rgb(var(--color-foreground));
     font-weight: 700;
     font-size: 1.6rem;
+    opacity: 0;
+    animation: fadeInAmount 0.3s ease-out 0.25s forwards;
+  }
+
+  @keyframes fadeInAmount {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
   
   /* Fixed Progress Bar Styles */
@@ -878,10 +904,26 @@
     margin-top: 1rem;
     margin-bottom: 0;
     color: rgba(var(--color-foreground), 0.75);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
   
   .gift-selected-info-text strong {
     color: rgb(var(--color-foreground));
+  }
+  
+  /* Prevent FOUC for success state */
+  .gift-state--success {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  
+  .gift-state--success.loaded {
+    opacity: 1;
+  }
+  
+  .gift-state--success.loaded .gift-selected-info-text {
+    opacity: 1;
   }
   
   /* Button Overrides */
@@ -1051,53 +1093,136 @@
   "settings": [
     {
       "type": "header",
-      "content": "Configuration"
+      "content": "⚙️ Basic Configuration"
     },
     {
       "type": "number",
       "id": "threshold",
       "label": "Threshold amount",
       "default": 250,
-      "info": "Minimum cart value to receive a gift"
+      "info": "Minimum cart value to receive a gift (in your store's base currency)"
+    },
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "Enable free gift promotion",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_cart_page_only",
+      "label": "Show only on cart page",
+      "default": false,
+      "info": "If enabled, this section will only appear on the cart page"
     },
     {
       "type": "header",
-      "content": "Text Content"
+      "content": "📝 Text Content & Messages"
     },
     {
       "type": "text",
       "id": "title",
       "label": "Section title",
       "default": "Free gift with purchases over $250",
-      "info": "Describe how the promotion works - this text will always be visible"
+      "info": "Main heading that describes the promotion"
     },
     {
       "type": "textarea",
       "id": "progress_message",
-      "label": "Message before threshold",
-      "default": "Add products worth [amount] to receive a free gift!"
+      "label": "Progress message",
+      "default": "Add products worth [amount] to receive a free gift!",
+      "info": "Message shown before threshold is reached. Use [amount] placeholder for remaining amount."
     },
     {
       "type": "text",
       "id": "threshold_message",
-      "label": "Message after reaching threshold",
-      "default": "Congratulations! Choose your free gift:"
+      "label": "Threshold reached message",
+      "default": "Congratulations! Choose your free gift:",
+      "info": "Message shown when customer qualifies for a gift"
     },
     {
       "type": "text",
       "id": "success_message",
-      "label": "Message after adding gift",
-      "default": "Gift has been added to your cart!"
+      "label": "Success message",
+      "default": "Gift has been added to your cart!",
+      "info": "Message shown after gift is successfully added"
     },
     {
       "type": "text",
       "id": "add_button_text",
-      "label": "Button text",
+      "label": "Add gift button text",
       "default": "Add free gift"
     },
     {
+      "type": "text",
+      "id": "empty_cart_message",
+      "label": "Empty cart message",
+      "default": "Your cart is empty. Add products to receive a free gift!",
+      "info": "Message shown when cart is empty"
+    },
+    {
       "type": "header",
-      "content": "Appearance"
+      "content": "🎨 Visual Design & Layout"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "Section width",
+      "options": [
+        {
+          "value": "page-width",
+          "label": "Page width"
+        },
+        {
+          "value": "page-width-desktop",
+          "label": "Page width on desktop only"
+        },
+        {
+          "value": "full-width",
+          "label": "Full width"
+        }
+      ],
+      "default": "page-width"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Border radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "section_padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Section padding top",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "section_padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Section padding bottom",
+      "default": 36
+    },
+    {
+      "type": "header",
+      "content": "📊 Progress Bar Settings"
     },
     {
       "type": "checkbox",
@@ -1106,23 +1231,432 @@
       "default": true
     },
     {
-      "type": "color_scheme",
-      "id": "color_scheme",
-      "label": "Color scheme",
-      "default": "scheme-1"
+      "type": "color",
+      "id": "progress_bar_color",
+      "label": "Progress bar color",
+      "default": "#10b981"
+    },
+    {
+      "type": "color",
+      "id": "progress_bar_background",
+      "label": "Progress bar background color",
+      "default": "#f3f4f6"
+    },
+    {
+      "type": "range",
+      "id": "progress_bar_height",
+      "min": 4,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Progress bar height",
+      "default": 12
+    },
+    {
+      "type": "checkbox",
+      "id": "show_progress_percentage",
+      "label": "Show progress percentage",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_progress_amounts",
+      "label": "Show progress amounts",
+      "default": true,
+      "info": "Shows current/target amounts below progress bar"
+    },
+    {
+      "type": "checkbox",
+      "id": "animate_progress_bar",
+      "label": "Animate progress bar",
+      "default": true,
+      "info": "Adds smooth animation when progress updates"
+    },
+    {
+      "type": "header",
+      "content": "🎁 Gift Selection Settings"
+    },
+    {
+      "type": "select",
+      "id": "gift_layout",
+      "label": "Gift products layout",
+      "options": [
+        {
+          "value": "grid",
+          "label": "Grid layout"
+        },
+        {
+          "value": "carousel",
+          "label": "Carousel/Slider"
+        },
+        {
+          "value": "list",
+          "label": "List layout"
+        }
+      ],
+      "default": "grid"
+    },
+    {
+      "type": "range",
+      "id": "gifts_per_row_desktop",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "label": "Gifts per row (desktop)",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "gifts_per_row_tablet",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "label": "Gifts per row (tablet)",
+      "default": 2
+    },
+    {
+      "type": "range",
+      "id": "gifts_per_row_mobile",
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "label": "Gifts per row (mobile)",
+      "default": 1
+    },
+    {
+      "type": "checkbox",
+      "id": "show_gift_images",
+      "label": "Show gift product images",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_gift_titles",
+      "label": "Show gift product titles",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_variant_count",
+      "label": "Show variant count",
+      "default": true,
+      "info": "Shows 'X variants available' for products with multiple variants"
+    },
+    {
+      "type": "range",
+      "id": "gift_image_aspect_ratio",
+      "min": 50,
+      "max": 150,
+      "step": 10,
+      "unit": "%",
+      "label": "Gift image aspect ratio",
+      "default": 100,
+      "info": "100% = square, 150% = portrait, 75% = landscape"
+    },
+    {
+      "type": "range",
+      "id": "max_gifts_displayed",
+      "min": 3,
+      "max": 20,
+      "step": 1,
+      "label": "Maximum gifts displayed",
+      "default": 5,
+      "info": "Limits the number of gift products shown"
+    },
+    {
+      "type": "header",
+      "content": "🔔 Notifications & Feedback"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_notifications",
+      "label": "Show notification toasts",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "notification_position",
+      "label": "Notification position",
+      "options": [
+        {
+          "value": "top-right",
+          "label": "Top right"
+        },
+        {
+          "value": "top-left",
+          "label": "Top left"
+        },
+        {
+          "value": "bottom-right",
+          "label": "Bottom right"
+        },
+        {
+          "value": "bottom-left",
+          "label": "Bottom left"
+        },
+        {
+          "value": "top-center",
+          "label": "Top center"
+        }
+      ],
+      "default": "top-right"
+    },
+    {
+      "type": "range",
+      "id": "notification_duration",
+      "min": 1000,
+      "max": 9000,
+      "step": 500,
+      "unit": "ms",
+      "label": "Notification duration",
+      "default": 3000
+    },
+    {
+      "type": "header",
+      "content": "⚡ Advanced Features"
+    },
+    {
+      "type": "checkbox",
+      "id": "auto_remove_gifts",
+      "label": "Auto-remove gifts below threshold",
+      "default": true,
+      "info": "Automatically removes gifts when cart falls below threshold"
+    },
+    {
+      "type": "checkbox",
+      "id": "prevent_multiple_gifts",
+      "label": "Prevent multiple gifts",
+      "default": true,
+      "info": "Only allows one free gift per order"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_loading_states",
+      "label": "Show loading animations",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_analytics",
+      "label": "Enable analytics tracking",
+      "default": false,
+      "info": "Tracks gift selections and conversions (requires custom implementation)"
+    },
+    {
+      "type": "text",
+      "id": "custom_css_class",
+      "label": "Custom CSS class",
+      "info": "Add custom CSS class for additional styling"
+    },
+    {
+      "type": "header",
+      "content": "📱 Mobile Optimization"
+    },
+    {
+      "type": "checkbox",
+      "id": "mobile_optimized",
+      "label": "Enable mobile optimizations",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "mobile_stack_vertically",
+      "label": "Stack elements vertically on mobile",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "mobile_padding",
+      "min": 8,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Mobile padding",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "🎯 Targeting & Display Rules"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_for_logged_in_only",
+      "label": "Show for logged-in customers only",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_for_new_customers_only",
+      "label": "Show for new customers only",
+      "default": false,
+      "info": "Shows only for customers with no previous orders"
+    },
+    {
+      "type": "text",
+      "id": "excluded_countries",
+      "label": "Excluded countries",
+      "info": "Comma-separated country codes (e.g., US,CA,GB). Leave empty to show for all countries.",
+      "placeholder": "US,CA,GB"
+    },
+    {
+      "type": "header",
+      "content": "🔧 Technical Settings"
+    },
+    {
+      "type": "range",
+      "id": "update_debounce_time",
+      "min": 50,
+      "max": 1000,
+      "step": 50,
+      "unit": "ms",
+      "label": "Update debounce time",
+      "default": 100,
+      "info": "Delay between cart updates to prevent excessive API calls"
+    },
+    {
+      "type": "checkbox",
+      "id": "debug_mode",
+      "label": "Debug mode",
+      "default": false,
+      "info": "Enables console logging for troubleshooting"
+    },
+    {
+      "type": "text",
+      "id": "gift_product_tag",
+      "label": "Gift product tag",
+      "default": "free-gift",
+      "info": "Products with this tag will be available as gifts (optional filter)"
     }
   ],
   "blocks": [
     {
       "type": "gift_product",
       "name": "Gift Product",
-      "limit": 5,
+      "limit": 20,
       "settings": [
         {
           "type": "product",
           "id": "product",
           "label": "Select gift product",
           "info": "Product that will be available as a free gift"
+        },
+        {
+          "type": "text",
+          "id": "custom_title",
+          "label": "Custom title (optional)",
+          "info": "Override the product title for this gift"
+        },
+        {
+          "type": "textarea",
+          "id": "description",
+          "label": "Gift description (optional)",
+          "info": "Additional description for this gift option"
+        },
+        {
+          "type": "image_picker",
+          "id": "custom_image",
+          "label": "Custom image (optional)",
+          "info": "Override the product image for this gift"
+        },
+        {
+          "type": "checkbox",
+          "id": "featured",
+          "label": "Featured gift",
+          "default": false,
+          "info": "Mark this gift as featured (will appear first)"
+        },
+        {
+          "type": "checkbox",
+          "id": "limit_variants",
+          "label": "Limit specific variants",
+          "default": false,
+          "info": "Enable to show only specific variants of this product"
+        },
+        {
+          "type": "text",
+          "id": "allowed_variants",
+          "label": "Allowed variant IDs",
+          "info": "Comma-separated variant IDs if limiting variants (e.g., 123456,789012)",
+          "placeholder": "123456,789012"
+        },
+        {
+          "type": "range",
+          "id": "priority",
+          "min": 1,
+          "max": 100,
+          "step": 1,
+          "label": "Display priority",
+          "default": 50,
+          "info": "Higher numbers appear first"
+        }
+      ]
+    },
+    {
+      "type": "custom_message",
+      "name": "Custom Message",
+      "limit": 3,
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Message title",
+          "default": "Special Offer"
+        },
+        {
+          "type": "textarea",
+          "id": "content",
+          "label": "Message content",
+          "default": "Add more items to unlock exclusive gifts!"
+        },
+        {
+          "type": "select",
+          "id": "message_type",
+          "label": "Message type",
+          "options": [
+            {
+              "value": "info",
+              "label": "Information"
+            },
+            {
+              "value": "promotion",
+              "label": "Promotion"
+            },
+            {
+              "value": "warning",
+              "label": "Warning"
+            }
+          ],
+          "default": "info"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_icon",
+          "label": "Show icon",
+          "default": true
+        },
+        {
+          "type": "select",
+          "id": "display_condition",
+          "label": "When to show",
+          "options": [
+            {
+              "value": "always",
+              "label": "Always"
+            },
+            {
+              "value": "progress",
+              "label": "During progress only"
+            },
+            {
+              "value": "qualified",
+              "label": "When qualified only"
+            },
+            {
+              "value": "success",
+              "label": "After gift added only"
+            }
+          ],
+          "default": "progress"
         }
       ]
     }
@@ -1133,10 +1667,19 @@
       "blocks": [
         {
           "type": "gift_product"
+        },
+        {
+          "type": "gift_product"
+        },
+        {
+          "type": "gift_product"
         }
       ]
     }
   ],
-  "max_blocks": 5
+  "max_blocks": 25,
+  "enabled_on": {
+    "templates": ["*"]
+  }
 }
 {% endschema %}
