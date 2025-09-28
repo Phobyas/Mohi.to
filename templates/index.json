@@ -92,10 +92,6 @@
             "swatch_shape": "circle"
           }
         },
-        "quantity_selector_UmBxgR": {
-          "type": "quantity_selector",
-          "settings": {}
-        },
         "buy_buttons_rXBGCi": {
           "type": "buy_buttons",
           "settings": {
@@ -115,7 +111,6 @@
         "title_JhFcaa",
         "price_p6pChp",
         "variant_picker_rB3rPf",
-        "quantity_selector_UmBxgR",
         "buy_buttons_rXBGCi",
         "share_CmBJ96"
       ],
