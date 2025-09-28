@@ -1,140 +1,164 @@
 /**
- * Free Gift Threshold Manager
- * Handles threshold-based free gift promotions with cart monitoring
+ * Free Gift Threshold Manager - Optimized Version with Performance Improvements
+ * File: assets/free-gift-threshold.js
  */
 
 (function () {
-  "use strict";
-
-  // Cache frequently accessed DOM elements
-  const domCache = {
-    elements: new Map(),
-
-    get(selector) {
-      if (!this.elements.has(selector)) {
-        this.elements.set(selector, document.querySelector(selector));
-      }
-      return this.elements.get(selector);
+  // Performance improvements: Cache DOM selectors and reduce global scope pollution
+  const DOMCache = {
+    cartCountBubble: null,
+    cartSubtotal: null,
+    cartTotal: null,
+    cartDrawer: null,
+    cartItems: null,
+    init() {
+      // Lazy load selectors when needed
+      this.cartCountBubble =
+        this.cartCountBubble || document.querySelector(".cart-count-bubble");
+      this.cartSubtotal =
+        this.cartSubtotal || document.querySelector(".totals__subtotal-value");
+      this.cartTotal =
+        this.cartTotal || document.querySelector(".totals__total-value");
+      this.cartDrawer =
+        this.cartDrawer || document.querySelector("cart-drawer");
+      this.cartItems =
+        this.cartItems || document.querySelector("cart-drawer-items");
+      return this;
     },
-
-    clear() {
-      this.elements.clear();
+    refresh() {
+      // Clear cache to force re-query (useful after DOM updates)
+      this.cartCountBubble = null;
+      this.cartSubtotal = null;
+      this.cartTotal = null;
+      this.cartDrawer = null;
+      this.cartItems = null;
+      return this.init();
     },
   };
 
   class FreeGiftManager {
     constructor(section) {
       this.section = section;
-      this.threshold = parseInt(section.dataset.threshold) || 0;
+      this.threshold = parseInt(section.dataset.threshold);
       this.sectionId = section.dataset.sectionId;
       this.selectedGift = null;
       this.isProcessing = false;
       this.cartData = null;
       this.lastCartTotal = 0;
       this.lastUpdateTime = 0;
-      this.updateDebounceTime = 150;
+      this.updateDebounceTime = 100; // Prevent excessive updates
       this.monitoringActive = false;
 
-      this.bindMethods();
-      this.initialize();
-    }
-
-    bindMethods() {
+      // Bind methods to preserve context
       this.handleSectionChange = this.handleSectionChange.bind(this);
       this.handleAddGift = this.handleAddGift.bind(this);
       this.handleCartUpdate = this.handleCartUpdate.bind(this);
-      this.updateCartState = this.updateCartState.bind(this);
+      this.debouncedCartCheck = this.debouncedCartCheck.bind(this);
+
+      this.init();
     }
 
-    async initialize() {
+    async init() {
       try {
-        await this.fetchCartData();
-        this.setupEventListeners();
-        this.startMonitoring();
-        this.updateDisplay();
+        // Get initial cart state
+        await this.fetchCart();
+
+        // Set up event listeners
+        this.attachEventListeners();
+
+        // Start monitoring (only once)
+        if (!this.monitoringActive) {
+          this.startMonitoring();
+        }
+
+        // Initial UI update
+        this.updateUI();
       } catch (error) {
-        this.showNotification("Failed to initialize gift system", "error");
+        // Silent fail
       }
     }
 
-    setupEventListeners() {
+    attachEventListeners() {
       // Remove existing listeners to prevent duplicates
       this.section.removeEventListener("change", this.handleSectionChange);
       this.section.addEventListener("change", this.handleSectionChange);
 
-      const addButton = this.section.querySelector(".gift-add-btn");
-      if (addButton) {
-        addButton.removeEventListener("click", this.handleAddGift);
-        addButton.addEventListener("click", this.handleAddGift);
+      // Add gift button
+      const addBtn = this.section.querySelector(".gift-add-btn");
+      if (addBtn) {
+        addBtn.removeEventListener("click", this.handleAddGift);
+        addBtn.addEventListener("click", this.handleAddGift);
       }
     }
 
-    handleSectionChange(event) {
-      const target = event.target;
-
-      if (target.classList.contains("gift-radio")) {
-        this.selectProductByRadio(target);
-      } else if (target.classList.contains("gift-variant-select")) {
-        this.selectVariant(target);
+    handleSectionChange(e) {
+      if (e.target.classList.contains("gift-radio")) {
+        this.selectProductByRadio(e.target);
+      } else if (e.target.classList.contains("gift-variant-select")) {
+        this.selectVariant(e.target);
       }
+    }
+
+    handleAddGift() {
+      this.addGiftToCart();
     }
 
     selectProductByRadio(radio) {
       const productCard = radio.closest(".gift-product-card");
-      if (!productCard) return;
-
       const productId = productCard.dataset.productId;
 
-      // Hide all variant selections
+      // Hide all variant selections first
       this.section
         .querySelectorAll(".gift-variant-selection")
         .forEach((selection) => {
           selection.style.display = "none";
         });
 
-      // Show variant selection if needed
+      // Show variant selection for this product if it has variants
       const variantSelection = productCard.querySelector(
         ".gift-variant-selection"
       );
       if (variantSelection) {
         variantSelection.style.display = "block";
+
+        // Reset variant selection
         const variantSelect = variantSelection.querySelector(
           ".gift-variant-select"
         );
         if (variantSelect) {
           variantSelect.value = "";
         }
-        this.clearSelectedGift();
+
+        // Don't proceed until variant is chosen
+        this.selectedGift = null;
+        this.hideSelectedGift();
         return;
       }
 
-      // Handle single variant products
-      this.selectSingleVariantProduct(productCard);
-    }
-
-    selectSingleVariantProduct(productCard) {
+      // For products with single variant, use data attributes
       const productTitle =
         productCard.dataset.productTitle ||
-        productCard.querySelector(".gift-card-heading")?.textContent.trim() ||
-        "";
+        productCard.querySelector(".gift-card-heading").textContent.trim();
       const productImage =
         productCard.dataset.productImage ||
         productCard.querySelector(".gift-card-media img")?.src ||
         "";
-      const variantId = productCard.dataset.firstVariantId;
-      const variantPrice = productCard.dataset.firstVariantPrice;
+      const firstVariantId = productCard.dataset.firstVariantId;
+      const firstVariantPrice = productCard.dataset.firstVariantPrice;
 
-      if (variantId && variantPrice) {
+      if (firstVariantId && firstVariantPrice) {
         this.selectedGift = {
-          variantId,
+          variantId: firstVariantId,
           title: productTitle,
-          price: variantPrice,
+          price: firstVariantPrice,
           image: productImage,
         };
+
         this.showSelectedGift();
       } else {
-        this.fetchProductVariants(productCard.dataset.productId).then(
-          (product) => {
+        // Fallback to API call
+        this.getProductVariants(productId)
+          .then((product) => {
             if (product?.variants?.length > 0) {
               const firstVariant = product.variants[0];
               this.selectedGift = {
@@ -145,59 +169,28 @@
               };
               this.showSelectedGift();
             }
-          }
-        );
+          })
+          .catch((error) => {
+            // Silent fail
+          });
       }
     }
 
-    async fetchProductVariants(productId) {
+    async getProductVariants(productId) {
       try {
         const response = await fetch(`/products/${productId}.js`);
-        return response.ok ? await response.json() : null;
+        if (!response.ok) throw new Error("Failed to fetch product");
+        return await response.json();
       } catch (error) {
         return null;
       }
-    }
-
-    selectVariant(select) {
-      if (!select.value) {
-        this.clearSelectedGift();
-        return;
-      }
-
-      const selectedRadio = this.section.querySelector(
-        'input[name^="gift-selection"]:checked'
-      );
-      if (!selectedRadio) {
-        select.value = "";
-        return;
-      }
-
-      const productCard = select.closest(".gift-product-card");
-      const option = select.options[select.selectedIndex];
-      const productTitle =
-        productCard.querySelector(".gift-card-heading")?.textContent.trim() ||
-        "";
-
-      this.selectedGift = {
-        variantId: select.value,
-        title:
-          productTitle +
-          (option.dataset.title !== "Default Title"
-            ? ` - ${option.dataset.title}`
-            : ""),
-        price: option.dataset.price,
-        image: option.dataset.image,
-      };
-
-      this.showSelectedGift();
     }
 
     startMonitoring() {
       if (this.monitoringActive) return;
       this.monitoringActive = true;
 
-      // Listen to Dawn theme cart events
+      // Listen to Dawn theme cart events if available
       if (
         typeof subscribe !== "undefined" &&
         typeof PUB_SUB_EVENTS !== "undefined"
@@ -205,75 +198,100 @@
         subscribe(PUB_SUB_EVENTS.cartUpdate, this.handleCartUpdate);
       }
 
+      // Listen to cart form changes
       this.attachCartListeners();
     }
 
     attachCartListeners() {
-      const events = [
-        { selector: 'form[action*="/cart"]', event: "submit", delay: 500 },
-        {
-          selector: '.quantity__input, input[name="updates[]"]',
-          event: "change",
-          delay: 300,
-        },
-        {
-          selector: "cart-remove-button, .cart-remove",
-          event: "click",
-          delay: 500,
-        },
-      ];
-
-      events.forEach(({ selector, event, delay }) => {
-        document.addEventListener(event, (e) => {
-          if (e.target.matches(selector) || e.target.closest(selector)) {
-            setTimeout(() => this.updateCartState(), delay);
-          }
-        });
+      // Listen to cart form submissions
+      document.addEventListener("submit", (e) => {
+        if (e.target.matches('form[action*="/cart"]')) {
+          setTimeout(() => this.debouncedUpdate(), 500);
+        }
       });
 
-      // Custom cart events
-      ["cart:update", "cart:add"].forEach((eventName) => {
-        document.addEventListener(eventName, () => this.updateCartState());
+      // Listen to quantity changes
+      document.addEventListener("change", (e) => {
+        if (e.target.matches('.quantity__input, input[name="updates[]"]')) {
+          setTimeout(() => this.debouncedUpdate(), 300);
+        }
+      });
+
+      // Listen to remove button clicks
+      document.addEventListener("click", (e) => {
+        if (e.target.closest("cart-remove-button, .cart-remove")) {
+          setTimeout(() => this.debouncedUpdate(), 500);
+        }
+      });
+
+      // Listen to cart drawer events
+      document.addEventListener("cart:update", () => {
+        this.debouncedUpdate();
+      });
+
+      // Listen to add to cart events
+      document.addEventListener("cart:add", () => {
+        setTimeout(() => this.debouncedUpdate(), 300);
       });
     }
 
     async handleCartUpdate(event) {
+      // Skip if this update was triggered by our gift manager
       if (
         event?.source === "free-gift-add" ||
         event?.source === "free-gift-remove"
       ) {
         return;
       }
-      await this.updateCartState();
+
+      await this.debouncedUpdate();
     }
 
-    async updateCartState() {
+    async debouncedUpdate() {
       const now = Date.now();
       if (now - this.lastUpdateTime < this.updateDebounceTime) {
-        return;
+        return; // Skip if updated too recently
       }
       this.lastUpdateTime = now;
 
       try {
-        await this.fetchCartData();
-        this.updateDisplay();
+        await this.fetchCart();
+        this.updateUI();
       } catch (error) {
-        // Silent fail for state updates
+        // Silent fail
       }
     }
 
-    async fetchCartData() {
-      const response = await fetch(
-        `${window.Shopify?.routes?.root || "/"}cart.js`
-      );
-      if (!response.ok) throw new Error("Failed to fetch cart data");
+    async debouncedCartCheck() {
+      try {
+        const response = await fetch(window.Shopify.routes.root + "cart.js");
+        const currentCart = await response.json();
 
-      this.cartData = await response.json();
-      this.lastCartTotal = this.cartData.total_price;
-      return this.cartData;
+        if (currentCart.total_price !== this.lastCartTotal) {
+          this.lastCartTotal = currentCart.total_price;
+          this.cartData = currentCart;
+          this.updateUI();
+        }
+      } catch (error) {
+        // Silent fail for polling
+      }
     }
 
-    updateDisplay() {
+    async fetchCart() {
+      try {
+        const response = await fetch(window.Shopify.routes.root + "cart.js");
+        if (!response.ok) throw new Error("Failed to fetch cart");
+
+        this.cartData = await response.json();
+        this.lastCartTotal = this.cartData.total_price;
+
+        return this.cartData;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    updateUI() {
       if (!this.cartData) return;
 
       const states = {
@@ -282,19 +300,20 @@
         success: this.section.querySelector(".gift-state--success"),
       };
 
-      const existingGift = this.cartData.items.find(
-        (item) => item.properties?._is_free_gift === "true"
+      // Check for existing gift
+      const giftItem = this.cartData.items.find(
+        (item) => item.properties && item.properties._is_free_gift === "true"
       );
-      const hasGift = Boolean(existingGift);
+      const hasGift = !!giftItem;
       const thresholdMet = this.cartData.total_price >= this.threshold;
 
-      // Remove gift if threshold not met
+      // Check if gift needs to be removed (has gift but threshold not met)
       if (hasGift && !thresholdMet) {
         this.removeGift();
         return;
       }
 
-      // Hide all states
+      // Hide all states first
       Object.values(states).forEach((state) => {
         if (state) {
           state.style.display = "none";
@@ -303,43 +322,36 @@
         }
       });
 
-      // Show appropriate state
+      // Show appropriate state with immediate visibility
       if (hasGift) {
-        this.showSuccessState(states.success);
+        if (states.success) {
+          // Update success info BEFORE showing the state
+          this.updateSuccessInfo();
+
+          // Then show the state immediately
+          states.success.style.display = "block";
+          states.success.style.visibility = "visible";
+          states.success.style.opacity = "1"; // Force opacity
+          states.success.classList.add("loaded");
+
+          // Force a reflow to ensure immediate display
+          states.success.offsetHeight;
+        }
       } else if (thresholdMet) {
-        this.showSelectorState(states.selector);
+        if (states.selector) {
+          states.selector.style.display = "block";
+          states.selector.style.visibility = "visible";
+        }
       } else {
-        this.showProgressState(states.progress);
+        if (states.progress) {
+          states.progress.style.display = "block";
+          states.progress.style.visibility = "visible";
+          this.updateProgress();
+        }
       }
     }
 
-    showProgressState(state) {
-      if (!state) return;
-
-      state.style.display = "block";
-      state.style.visibility = "visible";
-      this.updateProgressDisplay();
-    }
-
-    showSelectorState(state) {
-      if (!state) return;
-
-      state.style.display = "block";
-      state.style.visibility = "visible";
-    }
-
-    showSuccessState(state) {
-      if (!state) return;
-
-      this.updateSuccessDisplay();
-      state.style.display = "block";
-      state.style.visibility = "visible";
-      state.style.opacity = "1";
-      state.classList.add("loaded");
-      state.offsetHeight; // Force reflow
-    }
-
-    updateProgressDisplay() {
+    updateProgress() {
       if (!this.cartData) return;
 
       const remaining = Math.max(0, this.threshold - this.cartData.total_price);
@@ -348,7 +360,7 @@
         100
       );
 
-      // Update message
+      // Update gift message
       const messageEl = this.section.querySelector(
         ".gift-state--progress .gift-message"
       );
@@ -367,28 +379,15 @@
       }
 
       // Update progress bar
-      this.updateProgressBar(percentage);
-      this.updateProgressAmounts();
-    }
-
-    updateProgressBar(percentage) {
       const progressFill = this.section.querySelector(
         `#progress-fill-${this.sectionId}`
       );
       if (progressFill) {
-        progressFill.style.width = `${percentage}%`;
+        progressFill.style.width = percentage + "%";
         progressFill.setAttribute("data-progress", percentage.toFixed(1));
       }
 
-      const percentageEl = this.section.querySelector(
-        `#progress-percent-${this.sectionId}`
-      );
-      if (percentageEl) {
-        percentageEl.textContent = Math.round(percentage);
-      }
-    }
-
-    updateProgressAmounts() {
+      // Update amounts
       const currentEl = this.section.querySelector(
         `#progress-current-${this.sectionId}`
       );
@@ -402,31 +401,76 @@
       if (targetEl) {
         targetEl.textContent = this.formatMoney(this.threshold);
       }
+
+      const percentageEl = this.section.querySelector(
+        `#progress-percent-${this.sectionId}`
+      );
+      if (percentageEl) {
+        percentageEl.textContent = Math.round(percentage);
+      }
     }
 
-    updateSuccessDisplay() {
+    updateSuccessInfo() {
       const giftItem = this.cartData.items.find(
-        (item) => item.properties?._is_free_gift === "true"
+        (item) => item.properties && item.properties._is_free_gift === "true"
       );
 
       if (giftItem) {
         const infoEl = this.section.querySelector(".gift-selected-info-text");
+
         if (infoEl) {
           let title = giftItem.product_title;
           if (
             giftItem.variant_title &&
             giftItem.variant_title !== "Default Title"
           ) {
-            title += ` - ${giftItem.variant_title}`;
+            title += " - " + giftItem.variant_title;
           }
+
+          // Update the content immediately
           infoEl.innerHTML = `Selected gift: <strong>${title}</strong>`;
-          infoEl.style.opacity = "1";
+          infoEl.style.opacity = "1"; // Force visibility
         }
       }
     }
 
-    clearSelectedGift() {
-      this.selectedGift = null;
+    selectVariant(select) {
+      if (!select.value) {
+        this.selectedGift = null;
+        this.hideSelectedGift();
+        return;
+      }
+
+      // Ensure a product is selected
+      const selectedRadio = this.section.querySelector(
+        'input[name^="gift-selection"]:checked'
+      );
+      if (!selectedRadio) {
+        select.value = "";
+        return;
+      }
+
+      const productCard = select.closest(".gift-product-card");
+      const option = select.options[select.selectedIndex];
+      const productTitle = productCard
+        .querySelector(".gift-card-heading")
+        .textContent.trim();
+
+      this.selectedGift = {
+        variantId: select.value,
+        title:
+          productTitle +
+          (option.dataset.title !== "Default Title"
+            ? " - " + option.dataset.title
+            : ""),
+        price: option.dataset.price,
+        image: option.dataset.image,
+      };
+
+      this.showSelectedGift();
+    }
+
+    hideSelectedGift() {
       const selectedDiv = this.section.querySelector(".gift-selected");
       if (selectedDiv) {
         selectedDiv.style.display = "none";
@@ -450,6 +494,7 @@
         titleEl.textContent = this.selectedGift.title;
       }
 
+      // Show with smooth animation
       selectedDiv.style.display = "block";
       selectedDiv.offsetHeight; // Force reflow
       selectedDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -458,20 +503,20 @@
     async addGiftToCart() {
       if (this.isProcessing || !this.selectedGift) return;
 
-      // Verify threshold is still met
-      await this.fetchCartData();
+      // Security check - verify threshold is met
+      await this.fetchCart();
       if (this.cartData.total_price < this.threshold) {
         this.showNotification(
           "Cart does not meet the required threshold",
           "error"
         );
-        this.updateDisplay();
+        this.updateUI();
         return;
       }
 
-      // Check for existing gift
+      // Check if gift already exists
       const existingGift = this.cartData.items.find(
-        (item) => item.properties?._is_free_gift === "true"
+        (item) => item.properties && item.properties._is_free_gift === "true"
       );
 
       if (existingGift) {
@@ -501,7 +546,7 @@
         };
 
         const response = await fetch(
-          `${window.Shopify?.routes?.root || "/"}cart/add.js`,
+          window.Shopify.routes.root + "cart/add.js",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -515,19 +560,39 @@
         }
 
         this.showNotification("Gift has been added to cart!", "success");
-        await this.fetchCartData();
-        this.updateDisplay();
-        this.publishCartUpdate("free-gift-add");
+
+        // Refresh cart data and update UI immediately
+        await this.fetchCart();
+        this.updateUI();
+
+        // Trigger cart update event
+        if (
+          typeof publish !== "undefined" &&
+          typeof PUB_SUB_EVENTS !== "undefined"
+        ) {
+          publish(PUB_SUB_EVENTS.cartUpdate, { source: "free-gift-add" });
+        }
       } catch (error) {
-        this.showNotification(`Cannot add gift: ${error.message}`, "error");
+        this.showNotification("Cannot add gift: " + error.message, "error");
       } finally {
         this.setButtonLoading(button, false);
       }
     }
 
+    setButtonLoading(button, loading) {
+      this.isProcessing = loading;
+      button.setAttribute("aria-busy", loading.toString());
+      button.classList.toggle("loading", loading);
+
+      const spinner = button.querySelector(".loading-overlay__spinner");
+      if (spinner) {
+        spinner.classList.toggle("hidden", !loading);
+      }
+    }
+
     async removeGift() {
       const giftItem = this.cartData.items.find(
-        (item) => item.properties?._is_free_gift === "true"
+        (item) => item.properties && item.properties._is_free_gift === "true"
       );
 
       if (!giftItem) return;
@@ -536,7 +601,7 @@
 
       try {
         const response = await fetch(
-          `${window.Shopify?.routes?.root || "/"}cart/change.js`,
+          window.Shopify.routes.root + "cart/change.js",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -556,9 +621,19 @@
         this.lastCartTotal = updatedCart.total_price;
 
         this.showNotification("Gift removed (cart below threshold)", "warning");
-        this.updateCartDisplay(updatedCart);
-        this.updateDisplay();
-        this.publishCartUpdate("free-gift-remove", updatedCart);
+        this.updateCartUI(updatedCart);
+        this.updateUI();
+
+        // Trigger cart update event
+        if (
+          typeof publish !== "undefined" &&
+          typeof PUB_SUB_EVENTS !== "undefined"
+        ) {
+          publish(PUB_SUB_EVENTS.cartUpdate, {
+            source: "free-gift-remove",
+            cartData: updatedCart,
+          });
+        }
       } catch (error) {
         this.showNotification("Error removing gift", "error");
       } finally {
@@ -566,66 +641,45 @@
       }
     }
 
-    updateCartDisplay(cartData) {
+    updateCartUI(cartData) {
+      // Use cached selectors for better performance
+      DOMCache.init();
+
       // Update cart count
-      const cartCountBubble = domCache.get(".cart-count-bubble");
-      if (cartCountBubble) {
-        const count = cartCountBubble.querySelector('span[aria-hidden="true"]');
+      if (DOMCache.cartCountBubble) {
+        const count = DOMCache.cartCountBubble.querySelector(
+          'span[aria-hidden="true"]'
+        );
         if (count) {
           count.textContent = cartData.item_count;
         }
       }
 
-      // Update cart totals on cart page
+      // Update cart totals if on cart page
       if (window.location.pathname.includes("/cart")) {
-        const subtotalEl = domCache.get(".totals__subtotal-value");
-        if (subtotalEl) {
-          subtotalEl.textContent = this.formatMoney(
+        if (DOMCache.cartSubtotal) {
+          DOMCache.cartSubtotal.textContent = this.formatMoney(
             cartData.items_subtotal_price
           );
         }
 
-        const totalEl = domCache.get(".totals__total-value");
-        if (totalEl) {
-          totalEl.textContent = this.formatMoney(cartData.total_price);
+        if (DOMCache.cartTotal) {
+          DOMCache.cartTotal.textContent = this.formatMoney(
+            cartData.total_price
+          );
         }
       }
 
       // Update cart drawer if open
-      const cartDrawer = domCache.get("cart-drawer");
-      if (cartDrawer?.classList.contains("active")) {
-        const cartItems = domCache.get("cart-drawer-items");
-        if (cartItems?.onCartUpdate) {
-          cartItems.onCartUpdate();
+      if (DOMCache.cartDrawer?.classList.contains("active")) {
+        if (DOMCache.cartItems?.onCartUpdate) {
+          DOMCache.cartItems.onCartUpdate();
         }
       }
     }
 
-    publishCartUpdate(source, cartData = null) {
-      if (
-        typeof publish !== "undefined" &&
-        typeof PUB_SUB_EVENTS !== "undefined"
-      ) {
-        publish(PUB_SUB_EVENTS.cartUpdate, {
-          source,
-          cartData: cartData || this.cartData,
-          variantId: this.selectedGift?.variantId,
-        });
-      }
-    }
-
-    setButtonLoading(button, loading) {
-      this.isProcessing = loading;
-      button.setAttribute("aria-busy", loading.toString());
-      button.classList.toggle("loading", loading);
-
-      const spinner = button.querySelector(".loading-overlay__spinner");
-      if (spinner) {
-        spinner.classList.toggle("hidden", !loading);
-      }
-    }
-
     formatMoney(cents) {
+      // Use Shopify's money format if available
       if (window.Shopify?.formatMoney && window.theme?.moneyFormat) {
         return window.Shopify.formatMoney(cents, window.theme.moneyFormat);
       }
@@ -664,39 +718,40 @@
       });
     }
 
+    // Cleanup method
     destroy() {
       this.monitoringActive = false;
       this.section.removeEventListener("change", this.handleSectionChange);
-      const addButton = this.section.querySelector(".gift-add-btn");
-      if (addButton) {
-        addButton.removeEventListener("click", this.handleAddGift);
+      const addBtn = this.section.querySelector(".gift-add-btn");
+      if (addBtn) {
+        addBtn.removeEventListener("click", this.handleAddGift);
       }
-      domCache.clear();
     }
   }
 
-  // Cart Gift Protection Manager
+  // Optimized Cart Protection Manager - Event-driven
   class CartGiftProtection {
     constructor() {
       this.isActive = false;
       this.cachedCart = null;
       this.lastProtectionRun = 0;
-      this.protectionDebounce = 500;
+      this.protectionDebounce = 500; // Reduce frequency
 
-      this.initialize();
+      this.init();
     }
 
-    initialize() {
+    init() {
+      // Only initialize if we're on a cart-related page
       if (this.shouldActivate()) {
         this.startProtection();
       }
     }
 
     shouldActivate() {
-      return Boolean(
+      return (
         document.body.classList.contains("template-cart") ||
-          document.querySelector("cart-drawer") ||
-          document.querySelector("cart-items")
+        document.querySelector("cart-drawer") ||
+        document.querySelector("cart-items")
       );
     }
 
@@ -704,7 +759,10 @@
       if (this.isActive) return;
       this.isActive = true;
 
+      // Listen to cart events instead of polling
       this.attachProtectionListeners();
+
+      // Initial run
       this.protectGiftQuantities();
     }
 
@@ -721,7 +779,7 @@
         setTimeout(() => this.protectGiftQuantities(), 200);
       });
 
-      // Listen to Dawn's events
+      // Listen to Dawn's PUB_SUB_EVENTS if available
       if (
         typeof subscribe !== "undefined" &&
         typeof PUB_SUB_EVENTS !== "undefined"
@@ -735,17 +793,15 @@
     async protectGiftQuantities() {
       const now = Date.now();
       if (now - this.lastProtectionRun < this.protectionDebounce) {
-        return;
+        return; // Skip if run too recently
       }
       this.lastProtectionRun = now;
 
       try {
-        const response = await fetch(
-          `${window.Shopify?.routes?.root || "/"}cart.js`
-        );
+        const response = await fetch(window.Shopify.routes.root + "cart.js");
         const cart = await response.json();
 
-        // Skip if cart hasn't changed
+        // Only update if cart has changed
         if (
           JSON.stringify(cart.items) === JSON.stringify(this.cachedCart?.items)
         ) {
@@ -753,73 +809,67 @@
         }
         this.cachedCart = cart;
 
-        this.resetQuantityControls();
-        this.disableGiftQuantityControls(cart.items);
-      } catch (error) {
-        // Silent fail for protection
-      }
-    }
+        // Reset all quantity controls first
+        document.querySelectorAll(".quantity__input").forEach((input) => {
+          const row = input.closest(".cart-item");
+          const isGift =
+            row?.dataset.isGift === "true" ||
+            row?.dataset.isSample === "true" ||
+            row?.querySelector(".gift-item-disabled");
 
-    resetQuantityControls() {
-      document.querySelectorAll(".quantity__input").forEach((input) => {
-        const row = input.closest(".cart-item");
-        const isGift =
-          row?.dataset.isGift === "true" ||
-          row?.dataset.isSample === "true" ||
-          row?.querySelector(".gift-item-disabled");
-
-        if (!isGift) {
-          input.disabled = false;
-          input.readOnly = false;
-
-          const container = input.closest("quantity-input");
-          if (container) {
-            container.querySelectorAll("button").forEach((btn) => {
-              btn.disabled = false;
-              btn.style.opacity = "";
-              btn.style.cursor = "";
-            });
-          }
-        }
-      });
-    }
-
-    disableGiftQuantityControls(items) {
-      items.forEach((item, index) => {
-        if (item.properties?._is_free_gift === "true") {
-          const input =
-            document.querySelector(
-              `input[data-quantity-variant-id="${item.variant_id}"]`
-            ) || document.querySelector(`#Quantity-${index + 1}`);
-
-          if (input) {
-            input.disabled = true;
-            input.readOnly = true;
-            input.value = 1;
+          if (!isGift) {
+            input.disabled = false;
+            input.readOnly = false;
 
             const container = input.closest("quantity-input");
             if (container) {
               container.querySelectorAll("button").forEach((btn) => {
-                btn.disabled = true;
-                btn.style.opacity = "0.5";
-                btn.style.cursor = "not-allowed";
+                btn.disabled = false;
+                btn.style.opacity = "";
+                btn.style.cursor = "";
               });
             }
           }
-        }
-      });
+        });
+
+        // Only disable gift items
+        cart.items.forEach((item, index) => {
+          if (item.properties && item.properties._is_free_gift === "true") {
+            const input =
+              document.querySelector(
+                `input[data-quantity-variant-id="${item.variant_id}"]`
+              ) || document.querySelector(`#Quantity-${index + 1}`);
+
+            if (input) {
+              input.disabled = true;
+              input.readOnly = true;
+              input.value = 1;
+
+              const container = input.closest("quantity-input");
+              if (container) {
+                container.querySelectorAll("button").forEach((btn) => {
+                  btn.disabled = true;
+                  btn.style.opacity = "0.5";
+                  btn.style.cursor = "not-allowed";
+                });
+              }
+            }
+          }
+        });
+      } catch (error) {
+        // Silent fail
+      }
     }
 
     destroy() {
       this.isActive = false;
-      domCache.clear();
     }
   }
 
-  // Global initialization
+  // Initialize protection manager
   let cartProtection = null;
 
-  // Backward compatibility
+  // Global functions for backward compatibility
   window.protectGiftQuantities = function () {
     if (!cartProtection) {
       cartProtection = new CartGiftProtection();
@@ -828,27 +878,29 @@
     }
   };
 
-  function initializeGiftManagers() {
+  // Initialize gift managers
+  function initGiftThreshold() {
     document.querySelectorAll(".free-gift-threshold").forEach((section) => {
       if (section.giftManager) {
-        section.giftManager.destroy();
+        section.giftManager.destroy(); // Clean up existing
       }
       section.giftManager = new FreeGiftManager(section);
     });
 
+    // Initialize cart protection only if needed
     if (!cartProtection && document.querySelector(".free-gift-threshold")) {
       cartProtection = new CartGiftProtection();
     }
   }
 
-  // Initialize when DOM is ready
+  // DOM ready initialization
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializeGiftManagers);
+    document.addEventListener("DOMContentLoaded", initGiftThreshold);
   } else {
-    initializeGiftManagers();
+    initGiftThreshold();
   }
 
-  // Handle Shopify section events
+  // Shopify section events
   document.addEventListener("shopify:section:load", (event) => {
     const section = event.target.querySelector(".free-gift-threshold");
     if (section) {
