@@ -1,6 +1,6 @@
 /**
- * Free Gift Threshold Manager - Conservative Optimization
- * Maintaining all functionality while reducing code size
+ * Free Gift Threshold Manager - Production Version
+ * All logging and debugging code removed for production use
  */
 
 (function () {
@@ -10,37 +10,6 @@
     PROTECTION_DEBOUNCE: 500,
     RETRY_MAX: 3,
     RETRY_DELAY: 500,
-  };
-
-  // Enhanced logging utility
-  const Logger = {
-    enabled:
-      window.location.hostname === "localhost" ||
-      window.location.search.includes("debug=gift"),
-
-    log(level, message, data = null) {
-      if (!this.enabled) return;
-      const timestamp = new Date().toISOString();
-      const logMessage = `[${timestamp}] [GIFT-${level.toUpperCase()}] ${message}`;
-      if (data) {
-        console[level](logMessage, data);
-      } else {
-        console[level](logMessage);
-      }
-    },
-
-    debug(message, data) {
-      this.log("debug", message, data);
-    },
-    info(message, data) {
-      this.log("info", message, data);
-    },
-    warn(message, data) {
-      this.log("warn", message, data);
-    },
-    error(message, data) {
-      this.log("error", message, data);
-    },
   };
 
   // Performance improvements: Cache DOM selectors
@@ -102,11 +71,9 @@
       for (let i = 0; i <= maxRetries; i++) {
         try {
           const result = await fn();
-          if (i > 0) Logger.info(`Operation succeeded after ${i} retries`);
           return result;
         } catch (error) {
           lastError = error;
-          Logger.warn(`Attempt ${i + 1} failed:`, error.message);
           if (i < maxRetries) {
             await new Promise((resolve) =>
               setTimeout(resolve, delay * Math.pow(2, i))
@@ -114,10 +81,6 @@
           }
         }
       }
-      Logger.error(
-        `Operation failed after ${maxRetries + 1} attempts:`,
-        lastError
-      );
       throw lastError;
     },
   };
@@ -135,6 +98,10 @@
       this.updateDebounceTime = CONFIG.DEBOUNCE_TIME;
       this.monitoringActive = false;
       this.eventListeners = [];
+      this.shopCurrency = null;
+
+      // Initialize currency data immediately
+      this.initializeCurrencyData();
 
       // Bind methods to preserve context
       this.handleSectionChange = this.handleSectionChange.bind(this);
@@ -142,7 +109,6 @@
       this.handleCartUpdate = this.handleCartUpdate.bind(this);
       this.debouncedCartCheck = this.debouncedCartCheck.bind(this);
 
-      Logger.info(`Initializing FreeGiftManager for section ${this.sectionId}`);
       this.init();
     }
 
@@ -156,7 +122,7 @@
         try {
           element.removeEventListener(event, handler, options);
         } catch (error) {
-          Logger.warn("Failed to remove event listener:", error);
+          // Silent failure
         }
       });
       this.eventListeners = [];
@@ -164,16 +130,14 @@
 
     async init() {
       try {
-        Logger.debug("Starting initialization");
         await this.fetchCart();
         this.attachEventListeners();
         if (!this.monitoringActive) {
           this.startMonitoring();
         }
         this.updateUI();
-        Logger.info("Initialization completed successfully");
       } catch (error) {
-        Logger.error("Initialization failed:", error);
+        // Silent failure
       }
     }
 
@@ -189,13 +153,9 @@
       if (addBtn) {
         this.addEventListenerTracked(addBtn, "click", this.handleAddGift);
       }
-
-      Logger.debug("Event listeners attached");
     }
 
     handleSectionChange(e) {
-      Logger.debug("Section change detected:", e.target.className);
-
       if (e.target.classList.contains("gift-radio")) {
         this.selectProductByRadio(e.target);
       } else if (e.target.classList.contains("gift-variant-select")) {
@@ -204,15 +164,12 @@
     }
 
     handleAddGift() {
-      Logger.debug("Add gift button clicked");
       this.addGiftToCart();
     }
 
     selectProductByRadio(radio) {
       const productCard = radio.closest(".gift-product-card");
       const productId = productCard.dataset.productId;
-
-      Logger.debug(`Product selected: ${productId}`);
 
       // Hide all variant selections first
       this.section
@@ -256,11 +213,9 @@
           price: firstVariantPrice,
           image: productImage,
         };
-        Logger.debug("Gift selected from data attributes:", this.selectedGift);
         this.showSelectedGift();
       } else {
         // Fallback to API call with retry
-        Logger.debug("Fetching product variants from API");
         RetryHelper.execute(() => this.getProductVariants(productId))
           .then((product) => {
             if (product?.variants?.length > 0) {
@@ -271,12 +226,11 @@
                 price: firstVariant.price,
                 image: productImage,
               };
-              Logger.debug("Gift selected from API:", this.selectedGift);
               this.showSelectedGift();
             }
           })
           .catch((error) => {
-            Logger.error("Failed to fetch product variants:", error);
+            // Silent failure
           });
       }
     }
@@ -291,8 +245,6 @@
     startMonitoring() {
       if (this.monitoringActive) return;
       this.monitoringActive = true;
-
-      Logger.debug("Starting cart monitoring");
 
       // Listen to Dawn theme cart events if available
       if (
@@ -309,7 +261,6 @@
       // Listen to cart form submissions
       this.addEventListenerTracked(document, "submit", (e) => {
         if (e.target.matches('form[action*="/cart"]')) {
-          Logger.debug("Cart form submitted");
           setTimeout(() => this.debouncedUpdate(), 500);
         }
       });
@@ -317,7 +268,6 @@
       // Listen to quantity changes
       this.addEventListenerTracked(document, "change", (e) => {
         if (e.target.matches('.quantity__input, input[name="updates[]"]')) {
-          Logger.debug("Quantity changed");
           setTimeout(() => this.debouncedUpdate(), 300);
         }
       });
@@ -325,20 +275,17 @@
       // Listen to remove button clicks
       this.addEventListenerTracked(document, "click", (e) => {
         if (e.target.closest("cart-remove-button, .cart-remove")) {
-          Logger.debug("Remove button clicked");
           setTimeout(() => this.debouncedUpdate(), 500);
         }
       });
 
       // Listen to cart drawer events
       this.addEventListenerTracked(document, "cart:update", () => {
-        Logger.debug("Cart update event received");
         this.debouncedUpdate();
       });
 
       // Listen to add to cart events
       this.addEventListenerTracked(document, "cart:add", () => {
-        Logger.debug("Cart add event received");
         setTimeout(() => this.debouncedUpdate(), 300);
       });
     }
@@ -349,17 +296,14 @@
         event?.source === "free-gift-add" ||
         event?.source === "free-gift-remove"
       ) {
-        Logger.debug("Skipping self-triggered cart update");
         return;
       }
-      Logger.debug("Handling external cart update");
       await this.debouncedUpdate();
     }
 
     async debouncedUpdate() {
       const now = Date.now();
       if (now - this.lastUpdateTime < this.updateDebounceTime) {
-        Logger.debug("Update debounced - too recent");
         return;
       }
       this.lastUpdateTime = now;
@@ -368,7 +312,7 @@
         await this.fetchCart();
         this.updateUI();
       } catch (error) {
-        Logger.error("Debounced update failed:", error);
+        // Silent failure
       }
     }
 
@@ -380,11 +324,10 @@
         if (currentCart.total_price !== this.lastCartTotal) {
           this.lastCartTotal = currentCart.total_price;
           this.cartData = currentCart;
-          Logger.debug("Cart total changed, updating UI");
           this.updateUI();
         }
       } catch (error) {
-        Logger.warn("Cart polling failed:", error);
+        // Silent failure
       }
     }
 
@@ -395,11 +338,6 @@
 
       this.cartData = await response.json();
       this.lastCartTotal = this.cartData.total_price;
-
-      Logger.debug("Cart fetched:", {
-        total: this.cartData.total_price,
-        items: this.cartData.items.length,
-      });
 
       return this.cartData;
     }
@@ -418,15 +356,8 @@
       const hasGift = !!giftItem;
       const thresholdMet = this.cartData.total_price >= this.threshold;
 
-      Logger.debug("UI update:", {
-        hasGift,
-        thresholdMet,
-        threshold: this.threshold,
-      });
-
       // Check if gift needs to be removed (has gift but threshold not met)
       if (hasGift && !thresholdMet) {
-        Logger.info("Gift needs removal - threshold not met");
         this.removeGift();
         return;
       }
@@ -584,7 +515,6 @@
         image: option.dataset.image,
       };
 
-      Logger.debug("Variant selected:", this.selectedGift);
       this.showSelectedGift();
     }
 
@@ -623,13 +553,10 @@
 
       const lockKey = "add-gift";
       if (!TransactionLock.acquire(lockKey)) {
-        Logger.warn("Add gift operation already in progress");
         return;
       }
 
       try {
-        Logger.info("Starting add gift to cart operation");
-
         // Security check - verify threshold is met
         await this.fetchCart();
         if (this.cartData.total_price < this.threshold) {
@@ -686,7 +613,6 @@
         });
 
         this.showNotification("Gift has been added to cart!", "success");
-        Logger.info("Gift successfully added to cart");
 
         // Refresh cart data and update UI immediately
         await this.fetchCart();
@@ -700,7 +626,6 @@
           publish(PUB_SUB_EVENTS.cartUpdate, { source: "free-gift-add" });
         }
       } catch (error) {
-        Logger.error("Failed to add gift to cart:", error);
         this.showNotification("Cannot add gift: " + error.message, "error");
       } finally {
         const button = this.section.querySelector(".gift-add-btn");
@@ -734,7 +659,6 @@
     async removeGift() {
       const lockKey = "remove-gift";
       if (!TransactionLock.acquire(lockKey)) {
-        Logger.warn("Remove gift operation already in progress");
         return;
       }
 
@@ -742,7 +666,6 @@
         const giftItem = this.findGiftInCart();
         if (!giftItem) return;
 
-        Logger.info("Removing gift from cart");
         this.section.classList.add("gift-threshold-loading");
 
         const updatedCart = await RetryHelper.execute(async () => {
@@ -768,8 +691,6 @@
         this.updateCartUI(updatedCart);
         this.updateUI();
 
-        Logger.info("Gift successfully removed from cart");
-
         // Trigger cart update event
         if (
           typeof publish !== "undefined" &&
@@ -781,7 +702,6 @@
           });
         }
       } catch (error) {
-        Logger.error("Failed to remove gift:", error);
         this.showNotification("Error removing gift", "error");
       } finally {
         this.section.classList.remove("gift-threshold-loading");
@@ -824,30 +744,123 @@
       }
     }
 
-    // Enhanced money formatting
+    // Enhanced money formatting with dynamic currency
     formatMoney(cents) {
       if (window.Shopify?.formatMoney) {
         const format =
           window.theme?.moneyFormat ||
           window.Shopify.money_format ||
-          "{{amount_with_comma_separator}} zł";
+          this.getDefaultMoneyFormat();
         return window.Shopify.formatMoney(cents, format);
       }
 
+      // Fallback formatting with dynamic currency
+      const currency = this.getStoreCurrency();
       try {
         const amount = (cents / 100).toFixed(2);
         const [whole, decimal] = amount.split(".");
         const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-        return `${formattedWhole},${decimal} zł`;
+        return `${formattedWhole},${decimal} ${currency}`;
       } catch (error) {
-        Logger.error("Money formatting failed:", error);
-        return `${(cents / 100).toFixed(2)} zł`;
+        return `${(cents / 100).toFixed(2)} ${currency}`;
+      }
+    }
+
+    // Get store currency from various sources
+    getStoreCurrency() {
+      // First check if we stored it during initialization
+      if (this.shopCurrency) {
+        return this.shopCurrency;
+      }
+
+      // Try to get currency from Shopify object
+      if (window.Shopify?.currency?.active) {
+        this.shopCurrency = window.Shopify.currency.active;
+        return this.shopCurrency;
+      }
+
+      // Try to get from cart data if available
+      if (this.cartData?.currency) {
+        this.shopCurrency = this.cartData.currency;
+        return this.shopCurrency;
+      }
+
+      // Try to get from theme settings
+      if (window.theme?.shopCurrency) {
+        this.shopCurrency = window.theme.shopCurrency;
+        return this.shopCurrency;
+      }
+
+      // Try to get from Shopify shop object
+      if (window.Shopify?.shop?.currency) {
+        this.shopCurrency = window.Shopify.shop.currency;
+        return this.shopCurrency;
+      }
+
+      // Try to get from meta tag
+      const currencyMeta = document.querySelector('meta[name="currency"]');
+      if (currencyMeta) {
+        this.shopCurrency = currencyMeta.content;
+        return this.shopCurrency;
+      }
+
+      // Try to get from existing price elements on the page
+      const priceElement = document.querySelector(
+        '.money, .price, [class*="price"], [class*="money"]'
+      );
+      if (priceElement) {
+        const text = priceElement.textContent || priceElement.innerText;
+        const currencyMatch = text.match(/[A-Z]{3}|\$|€|£|¥|zł|kr|₹|₽/i);
+        if (currencyMatch) {
+          this.shopCurrency = currencyMatch[0];
+          return this.shopCurrency;
+        }
+      }
+
+      // Final fallback - try to detect from URL or default to USD
+      const hostname = window.location.hostname;
+      if (hostname.includes(".pl") || hostname.includes("poland")) {
+        this.shopCurrency = "PLN";
+        return this.shopCurrency;
+      }
+
+      this.shopCurrency = "USD"; // Ultimate fallback
+      return this.shopCurrency;
+    }
+
+    // Get default money format based on currency
+    getDefaultMoneyFormat() {
+      const currency = this.getStoreCurrency();
+
+      // Format templates for different currencies
+      const formats = {
+        USD: "${{amount}}",
+        EUR: "{{amount}} €",
+        GBP: "£{{amount}}",
+        PLN: "{{amount_with_comma_separator}} zł",
+        CAD: "${{amount}} CAD",
+        AUD: "${{amount}} AUD",
+        JPY: "¥{{amount_no_decimals}}",
+        SEK: "{{amount_with_comma_separator}} kr",
+        NOK: "{{amount_with_comma_separator}} kr",
+        DKK: "{{amount_with_comma_separator}} kr",
+      };
+
+      return formats[currency] || `{{amount}} ${currency}`;
+    }
+
+    // Initialize currency data from page load
+    initializeCurrencyData() {
+      // Store the shop's actual currency info for immediate access
+      if (window.Shopify?.shop?.currency) {
+        this.shopCurrency = window.Shopify.shop.currency;
+      }
+      if (window.theme?.shopCurrency) {
+        this.shopCurrency = window.theme.shopCurrency;
       }
     }
 
     showNotification(message, type = "info") {
-      Logger.info(`Showing notification: ${type} - ${message}`);
-
       // Remove existing notifications
       document
         .querySelectorAll(".gift-notification")
@@ -875,7 +888,6 @@
     }
 
     destroy() {
-      Logger.info(`Destroying FreeGiftManager for section ${this.sectionId}`);
       this.monitoringActive = false;
       this.removeAllEventListeners();
       this.isProcessing = false;
@@ -905,7 +917,7 @@
         try {
           element.removeEventListener(event, handler, options);
         } catch (error) {
-          Logger.warn("Failed to remove protection event listener:", error);
+          // Silent failure
         }
       });
       this.eventListeners = [];
@@ -913,7 +925,6 @@
 
     init() {
       if (this.shouldActivate()) {
-        Logger.debug("Activating cart gift protection");
         this.startProtection();
       }
     }
@@ -998,12 +1009,6 @@
         }
         this.cachedCart = cart;
 
-        Logger.debug(
-          "Protecting gift quantities for",
-          cart.items.length,
-          "items"
-        );
-
         // Reset all quantity controls first
         document.querySelectorAll(".quantity__input").forEach((input) => {
           const row = input.closest(".cart-item");
@@ -1042,18 +1047,15 @@
                   btn.style.cursor = "not-allowed";
                 });
               }
-
-              Logger.debug("Protected gift item quantity:", item.product_title);
             }
           }
         });
       } catch (error) {
-        Logger.warn("Gift protection failed:", error);
+        // Silent failure
       }
     }
 
     destroy() {
-      Logger.debug("Destroying cart gift protection");
       this.isActive = false;
       this.removeAllEventListeners();
     }
@@ -1073,8 +1075,6 @@
 
   // Initialize gift managers
   function initGiftThreshold() {
-    Logger.info("Initializing gift threshold system");
-
     document.querySelectorAll(".free-gift-threshold").forEach((section) => {
       if (section.giftManager) {
         section.giftManager.destroy();
@@ -1098,7 +1098,6 @@
   document.addEventListener("shopify:section:load", (event) => {
     const section = event.target.querySelector(".free-gift-threshold");
     if (section) {
-      Logger.info("Section loaded, reinitializing gift manager");
       if (section.giftManager) {
         section.giftManager.destroy();
       }
@@ -1114,7 +1113,6 @@
   });
 
   window.addEventListener("beforeunload", () => {
-    Logger.info("Page unloading, cleaning up gift managers");
     if (cartProtection) {
       cartProtection.destroy();
     }

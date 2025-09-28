@@ -100,8 +100,6 @@ product-info {
   }
 }
 
-/* Dynamic checkout */
-
 .shopify-payment-button__button {
   font-family: inherit;
   min-height: 4.6rem;
@@ -157,8 +155,6 @@ product-info {
   display: none;
 }
 
-/* Product form */
-
 .product-form {
   display: block;
 }
@@ -180,7 +176,6 @@ product-info {
   margin-top: 0.25rem;
 }
 
-/* Form Elements */
 .product-form__input {
   flex: 0 0 100%;
   padding: 0;
@@ -222,7 +217,6 @@ product-info {
   }
 }
 
-/* Overrides */
 .shopify-payment-button__more-options {
   color: rgb(var(--color-foreground));
 }
@@ -231,8 +225,6 @@ product-info {
   font-size: 1.5rem;
   letter-spacing: 0.1rem;
 }
-
-/* Product info */
 
 .product__info-container > * + * {
   margin: 1.5rem 0;
@@ -401,7 +393,6 @@ a.product__text {
   text-align: center;
 }
 
-/* Product media */
 .product__media-list video {
   border-radius: calc(var(--media-radius) - var(--media-border-width));
 }
@@ -627,7 +618,6 @@ a.product__text {
   box-shadow: none;
 }
 
-/* outline styling for Windows High Contrast Mode */
 @media (forced-colors: active) {
   .product__media-toggle:focus-visible,
   .product__media-toggle:focus-visible:after {
@@ -804,8 +794,6 @@ a.product__text {
   width: 2.2rem;
 }
 
-/* Product popup */
-
 .product-popup-modal {
   box-sizing: border-box;
   opacity: 0;
@@ -971,7 +959,6 @@ a.product__text {
   grid-gap: 1rem;
 }
 
-/* Fix to show some space at the end of our sliders in all browsers to be applied on thumbnails */
 .slider--mobile.thumbnail-list:after {
   content: none;
 }
@@ -1158,7 +1145,6 @@ a.product__text {
     0 0 0rem 0.5rem rgba(var(--color-foreground), 0.5);
 }
 
-/* outline styling for Windows High Contrast Mode */
 @media (forced-colors: active) {
   .thumbnail[aria-current]:focus,
   .thumbnail.focused {
@@ -1246,8 +1232,6 @@ a.product__text {
   flex-shrink: 0;
 }
 
-/* Inventory status */
-
 .product__inventory {
   display: flex;
   align-items: center;
@@ -1272,7 +1256,6 @@ a.product__text {
   justify-content: center;
 }
 
-/* This keeps the container from getting display: none; applied to it and to make sure we're not introducing some layout shift when switching to an unavailable variant */
 .product__inventory.visibility-hidden:empty {
   display: block;
 }
@@ -1290,7 +1273,6 @@ a.product__text {
   border-color: var(--color-warning-500);
 }
 
-/* Icon with text */
 .icon-with-text {
   --icon-size: calc(var(--font-heading-scale) * 3rem);
   --icon-spacing: calc(var(--font-heading-scale) * 1rem);
@@ -1380,8 +1362,6 @@ a.product__text {
   margin-bottom: var(--icon-size);
 }
 
-/* SKU block */
-
 .product__sku.visibility-hidden::after {
   content: "#";
 }
@@ -1397,8 +1377,6 @@ a.product__text {
   margin: var(--space-sm) 0;
 }
 
-/* Product-thumbnail snippet */
-
 .product-media-container {
   --aspect-ratio: var(--preview-ratio);
   --ratio-percent: calc(1 / var(--aspect-ratio) * 100%);
@@ -1408,7 +1386,6 @@ a.product__text {
 }
 
 .product-media-container.constrain-height {
-  /* arbitrary offset value based on average theme spacing and header height */
   --viewport-offset: 400px;
   --constrained-min-height: 300px;
   --constrained-height: max(
@@ -1439,7 +1416,6 @@ a.product__text {
   }
 
   .product-media-container.media-fit-cover .media {
-    /* allow media img element to scale relative to modal-opener/product-media-container */
     position: initial;
   }
 }
@@ -1450,7 +1426,6 @@ a.product__text {
   }
 
   .product-media-container:not(.media-type-image) {
-    /* override to use actual media ratio (not poster ratio) for video/models on desktop */
     --aspect-ratio: var(--ratio);
   }
 
@@ -1483,11 +1458,8 @@ a.product__text {
   }
 }
 
-/* Recipient form */
 .recipient-form {
-  /* (2.88[line-height] - 1.6rem) / 2 */
   --recipient-checkbox-margin-top: 0.64rem;
-
   display: block;
   position: relative;
   max-width: 44rem;
@@ -1609,9 +1581,6 @@ a.product__text {
   }
 }
 
-/* Enhanced Product Page Styles */
-
-/* Product info container with modern spacing */
 .product__info-container {
   padding: var(--space-lg);
   background: rgba(255, 255, 255, 0.95);
@@ -1620,7 +1589,6 @@ a.product__text {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Product title enhancement */
 .product__title h1 {
   background: linear-gradient(
     135deg,
@@ -1635,7 +1603,6 @@ a.product__text {
   margin-bottom: var(--space-lg);
 }
 
-/* Price styling with modern badges */
 .price .price__container {
   display: flex;
   align-items: center;
@@ -1675,7 +1642,6 @@ a.product__text {
   font-size: 0.75rem;
 }
 
-/* Product form enhancements */
 .product-form__cart-submit {
   background: var(--gradient-primary);
   border: none;
@@ -1715,51 +1681,26 @@ a.product__text {
   transform: translateY(-2px);
 }
 
-/* Variant picker styling - 3 per row, small consistent buttons */
-.product-form__input--pill fieldset {
-  border: 1px solid rgba(var(--color-foreground), 0.15);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-  background: rgb(var(--color-background));
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-xs);
-  max-width: 280px;
-  box-shadow: 0 0.2rem 0.4rem rgba(0, 0, 0, 0.04);
+.product__media img,
+.product__media-item img,
+.thumbnail img {
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
 }
 
-.product-form__input--pill input[type="radio"] + label {
-  background: rgb(var(--color-background));
-  border: 1px solid rgba(var(--color-foreground), 0.15);
-  border-radius: var(--radius-md);
-  padding: var(--space-xs);
-  font-weight: 500;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  height: 36px;
-  box-sizing: border-box;
-  color: rgb(var(--color-foreground));
+.product__media,
+.product__media-item .media,
+.thumbnail-list__item {
+  aspect-ratio: 1;
 }
 
-.product-form__input--pill input[type="radio"]:checked + label {
-  background: rgb(var(--color-foreground));
-  color: rgb(var(--color-background));
-  border-color: rgb(var(--color-foreground));
+.product__media-wrapper .media {
+  aspect-ratio: 1;
+  padding-top: 0;
 }
 
-.product-form__input--pill input[type="radio"] + label:hover {
-  background: rgba(var(--color-foreground), 0.05);
-  border-color: rgba(var(--color-foreground), 0.2);
-  transform: translateY(-1px);
-}
-
-/* Product description styling */
 .product__description {
   background: rgba(var(--color-primary-50), 0.3);
   padding: var(--space-xl);
@@ -1773,7 +1714,6 @@ a.product__text {
   color: rgba(var(--color-foreground), 0.8);
 }
 
-/* Accordion enhancements */
 .product__accordion .accordion__content {
   background: rgba(255, 255, 255, 0.95);
   border-radius: var(--radius-lg);
@@ -1796,7 +1736,6 @@ a.product__text {
   transform: translateY(-1px);
 }
 
-/* Share button enhancement */
 .share-button__button {
   background: rgba(var(--color-primary-500), 0.1);
   border: 2px solid rgba(var(--color-primary-500), 0.2);
@@ -1813,7 +1752,6 @@ a.product__text {
   transform: translateY(-2px);
 }
 
-/* Mobile responsive enhancements */
 @media screen and (max-width: 749px) {
   .product__info-container {
     padding: var(--space-md);
@@ -1832,7 +1770,6 @@ a.product__text {
   }
 }
 
-/* Tablet responsive enhancements */
 @media screen and (min-width: 750px) and (max-width: 989px) {
   .product__info-container {
     padding: var(--space-xl);
@@ -1848,7 +1785,6 @@ a.product__text {
   }
 }
 
-/* Desktop enhancements */
 @media screen and (min-width: 990px) {
   .product__info-container {
     padding: var(--space-2xl);

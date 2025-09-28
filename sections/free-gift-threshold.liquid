@@ -1,11 +1,11 @@
-{% comment %}
-  Free Gift Threshold Section - Dawn Theme Styled Version
-  File: sections/free-gift-threshold.liquid
-{% endcomment %}
 
 <script>
   window.theme = window.theme || {};
   window.theme.moneyFormat = {{ shop.money_format | json }};
+  window.theme.shopCurrency = {{ shop.currency | json }};
+  window.Shopify = window.Shopify || {};
+  window.Shopify.shop = window.Shopify.shop || {};
+  window.Shopify.shop.currency = {{ shop.currency | json }};
 </script>
 
 {%- liquid
@@ -63,7 +63,7 @@
         {% if cart.total_price == 0 %}
           {{ section.settings.empty_cart_message }}
         {% elsif remaining > 0 %}
-          {{ section.settings.progress_message | replace: '[amount]', '<span class="gift-amount">' | append: remaining | money | append: '</span>' }}
+          {{ section.settings.progress_message | replace: '[amount]', '<span class="gift-amount" data-amount="' | append: remaining | append: '"></span>' }}
         {% else %}
           {{ 'sections.free_gift.threshold_reached' | t }}
         {% endif %}
@@ -82,9 +82,9 @@
           </div>
           <div class="gift-progress-info">
             <div class="gift-progress-text">
-              <span id="progress-current-{{ section.id }}">{{ cart_total | money }}</span>
+              <span id="progress-current-{{ section.id }}" data-amount="{{ cart_total }}"></span>
               <span class="progress-separator">/</span>
-              <span id="progress-target-{{ section.id }}">{{ threshold_amount | money }}</span>
+              <span id="progress-target-{{ section.id }}" data-amount="{{ threshold_amount }}"></span>
             </div>
             <div class="gift-progress-percentage">
               <span id="progress-percent-{{ section.id }}">{{ progress_percentage | round }}</span>%
@@ -103,7 +103,7 @@
       </div>
       
       <div class="gift-message gift-message--success">
-        {{ section.settings.threshold_message | replace: 'Ã°Å¸Å½â€°', '' }}
+        {{ section.settings.threshold_message | replace: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Â°', '' }}
       </div>
       
       <div class="gift-selected" id="gift-selected-{{ section.id }}" style="display: none;">
