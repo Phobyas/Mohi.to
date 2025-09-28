@@ -129,7 +129,7 @@
       "settings": {
         "title": "Featured collection",
         "subtitle": "Discover our latest collection of premium streetwear",
-        "collection": "jordan",
+        "collection": "all",
         "products_to_show": 4,
         "products_per_view": 4,
         "products_per_view_mobile": 2,
