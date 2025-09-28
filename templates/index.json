@@ -16,7 +16,7 @@
           "type": "heading",
           "disabled": true,
           "settings": {
-            "heading": "",
+            "heading": "Kolekcja New Balance",
             "heading_size": "h0"
           }
         },
@@ -38,6 +38,7 @@
         "button"
       ],
       "settings": {
+        "image": "shopify://shop_images/Bez_nazwy-1.jpg",
         "image_overlay_opacity": 0,
         "image_height": "large",
         "image_behavior": "none",
@@ -91,6 +92,10 @@
             "swatch_shape": "circle"
           }
         },
+        "quantity_selector_UmBxgR": {
+          "type": "quantity_selector",
+          "settings": {}
+        },
         "buy_buttons_rXBGCi": {
           "type": "buy_buttons",
           "settings": {
@@ -110,6 +115,7 @@
         "title_JhFcaa",
         "price_p6pChp",
         "variant_picker_rB3rPf",
+        "quantity_selector_UmBxgR",
         "buy_buttons_rXBGCi",
         "share_CmBJ96"
       ],
