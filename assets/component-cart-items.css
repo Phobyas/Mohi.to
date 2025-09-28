@@ -365,3 +365,30 @@ cart-remove-button .icon-remove {
     padding-left: 0;
   }
 }
+.cart-item__image-container {
+  aspect-ratio: 1 / 1;
+}
+
+.cart-item__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Cart drawer images */
+.cart-drawer .cart-item__image-container {
+  aspect-ratio: 1 / 1;
+}
+
+.cart-drawer .cart-item__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Cart notification images */
+.cart-notification-product__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

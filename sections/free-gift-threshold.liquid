@@ -1,7 +1,13 @@
 {% comment %}
-  Free Gift Threshold Section - Simple Version with Blocks
+  Free Gift Threshold Section - Dawn Theme Styled Version
   File: sections/free-gift-threshold.liquid
 {% endcomment %}
+
+<!-- Add theme money format for JS -->
+<script>
+  window.theme = window.theme || {};
+  window.theme.moneyFormat = {{ shop.money_format | json }};
+</script>
 
 {%- liquid
   # Get settings
@@ -41,126 +47,224 @@
   endfor
 -%}
 
-<div class="free-gift-threshold" 
+<div class="free-gift-threshold page-width" 
      data-threshold="{{ threshold_amount }}"
      data-section-id="{{ section.id }}">
 
-  <div class="gift-container">
+  <div class="gift-container color-{{ section.settings.color_scheme }} gradient">
     <!-- Progress State -->
     <div class="gift-state gift-state--progress" data-state="progress" style="{% if has_gift or threshold_met %}display: none;{% endif %}">
-      <h3 class="gift-header">
-        <span class="gift-icon">🎁</span>
-        {{ section.settings.title }}
-      </h3>
+      <div class="gift-header">
+        <svg class="icon icon-gift" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="8" width="18" height="13" rx="2"/>
+          <path d="M12 8v13"/>
+          <path d="M3 12h18"/>
+          <path d="M7 8V6a2 2 0 012-2c1.5 0 3 1.5 3 3"/>
+          <path d="M17 8V6a2 2 0 00-2-2c-1.5 0-3 1.5-3 3"/>
+        </svg>
+        <h3 class="gift-heading h4">{{ section.settings.title }}</h3>
+      </div>
       
-      <p class="gift-message">
-        {{ section.settings.progress_message | replace: '[amount]', '<strong class="remaining-amount" data-amount="' | append: remaining | append: '">' | append: remaining | money | append: '</strong>' }}
-      </p>
+      <div class="gift-message" role="status" aria-live="polite">
+        {% if cart.total_price == 0 %}
+          Your cart is empty. Add products to receive a free gift!
+        {% elsif remaining > 0 %}
+          {{ section.settings.progress_message | replace: '[amount]', '<span class="gift-amount">' | append: remaining | money | append: '</span>' }}
+        {% else %}
+          Congratulations! You've reached the threshold for a free gift!
+        {% endif %}
+      </div>
       
       {%- if section.settings.show_progress_bar -%}
-        <div class="gift-progress-bar">
-          <div class="gift-progress-fill" data-progress="{{ progress_percentage }}" style="width: {{ progress_percentage }}%"></div>
+        <div class="gift-progress" id="gift-progress-{{ section.id }}">
+          <div class="gift-progress-container">
+            <div class="gift-progress-bar">
+              <div class="gift-progress-fill" 
+                   id="progress-fill-{{ section.id }}"
+                   data-progress="{{ progress_percentage }}" 
+                   style="width: {{ progress_percentage }}%;">
+              </div>
+            </div>
+          </div>
+          <div class="gift-progress-info">
+            <div class="gift-progress-text">
+              <span id="progress-current-{{ section.id }}">{{ cart_total | money }}</span>
+              <span class="progress-separator">/</span>
+              <span id="progress-target-{{ section.id }}">{{ threshold_amount | money }}</span>
+            </div>
+            <div class="gift-progress-percentage">
+              <span id="progress-percent-{{ section.id }}">{{ progress_percentage | round }}</span>%
+            </div>
+          </div>
         </div>
-        <p class="gift-progress-text">
-          <span class="progress-percentage">{{ progress_percentage | round }}</span>% do darmowego prezentu
-        </p>
       {%- endif -%}
     </div>
 
     <!-- Selector State -->
-    <div class="gift-state gift-state--selector" data-state="selector" style="{% unless threshold_met and has_gift == false %}display: none;{% endunless %}">
-      <h3 class="gift-header">
-        <span class="gift-icon">🎉</span>
-        {{ section.settings.title }}
-      </h3>
-      
-      <p class="gift-message">{{ section.settings.threshold_message }}</p>
-      
-      <!-- Gift Products Grid -->
-      <div class="gift-products-grid">
-        {%- assign has_products = false -%}
-        {%- for block in section.blocks -%}
-          {%- if block.type == 'gift_product' -%}
-            {%- assign product = all_products[block.settings.product] -%}
-            {%- if product and product.available -%}
-              {%- assign has_products = true -%}
-              <div class="gift-product-card" data-product-id="{{ product.id }}">
-                {%- if product.featured_image -%}
-                  <div class="gift-product-image-wrapper">
-                    <img src="{{ product.featured_image | image_url: width: 200 }}" 
-                         alt="{{ product.title | escape }}"
-                         class="gift-product-image"
-                         loading="lazy">
-                  </div>
-                {%- endif -%}
-                
-                <h4 class="gift-product-title">{{ product.title | truncate: 40 }}</h4>
-                
-                {%- if product.variants.size > 1 -%}
-                  <select class="gift-variant-select" data-product-id="{{ product.id }}">
-                    <option value="">Wybierz wariant...</option>
-                    {%- for variant in product.variants -%}
-                      {%- if variant.available -%}
-                        <option value="{{ variant.id }}" 
-                                data-title="{{ variant.title | escape }}"
-                                data-price="{{ variant.price }}"
-                                data-image="{% if variant.image %}{{ variant.image | image_url: width: 200 }}{% else %}{{ product.featured_image | image_url: width: 200 }}{% endif %}">
-                          {{ variant.title }}
-                        </option>
-                      {%- endif -%}
-                    {%- endfor -%}
-                  </select>
-                {%- else -%}
-                  {%- assign first_variant = product.variants.first -%}
-                  {%- if first_variant and first_variant.available -%}
-                    <button class="gift-select-btn"
-                            data-variant-id="{{ first_variant.id }}"
-                            data-title="{{ product.title | escape }}"
-                            data-price="{{ first_variant.price }}"
-                            data-image="{{ product.featured_image | image_url: width: 200 }}">
-                      Wybierz
-                    </button>
-                  {%- endif -%}
-                {%- endif -%}
-              </div>
-            {%- endif -%}
-          {%- endif -%}
-        {%- endfor -%}
-        
-        {%- unless has_products -%}
-          <p style="text-align: center; color: #6b7280; padding: 20px;">
-            Brak dostępnych produktów. Dodaj produkty używając bloków w edytorze motywu.
-          </p>
-        {%- endunless -%}
+    <div class="gift-state gift-state--selector" data-state="selector" style="{% if threshold_met and has_gift == false %}display: block;{% else %}display: none;{% endif %}">
+      <div class="gift-header gift-header--success">
+        <svg class="icon icon-star" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <h3 class="gift-heading h4">Choose your free gift!</h3>
       </div>
       
-      <!-- Selected Product Display -->
-      <div class="gift-selected" style="display: none;">
-        <div class="gift-selected-info">
-          <img class="gift-selected-image" src="" alt="">
-          <div class="gift-selected-details">
-            <h4>Wybrany prezent:</h4>
-            <p class="gift-selected-title"></p>
+      <div class="gift-message gift-message--success">
+        {{ section.settings.threshold_message | replace: '🎉', '' }}
+      </div>
+      
+      <!-- Selected Product Display - MOVED TO BE MORE VISIBLE -->
+      <div class="gift-selected" id="gift-selected-{{ section.id }}" style="display: none;">
+        <div class="gift-selected-card">
+          <div class="gift-selected-header">
+            <h4 class="gift-selected-heading">Selected gift:</h4>
+          </div>
+          <div class="gift-selected-info">
+            <div class="gift-selected-media">
+              <img class="gift-selected-image" src="" alt="" width="80" height="80">
+            </div>
+            <div class="gift-selected-details">
+              <h5 class="gift-selected-title"></h5>
+              <p class="gift-selected-label caption">Ready to add to cart</p>
+            </div>
+          </div>
+          <div class="gift-selected-actions">
+            <button class="button button--primary button--full-width gift-add-btn" type="button">
+              <span>{{ section.settings.add_button_text }}</span>
+              <div class="loading-overlay__spinner hidden">
+                <svg aria-hidden="true" focusable="false" class="spinner" viewBox="0 0 66 66">
+                  <circle class="path" fill="none" stroke-width="6" cx="33" cy="33" r="30"></circle>
+                </svg>
+              </div>
+            </button>
           </div>
         </div>
-        <button class="gift-button-primary gift-add-btn">
-          {{ section.settings.add_button_text }}
-        </button>
+      </div>
+      
+      <!-- Gift Products Grid -->
+      <div class="gift-products-wrapper">
+        <div class="gift-selection-header">
+          <h4 class="gift-selection-title">Choose one free gift:</h4>
+          <p class="gift-selection-subtitle">You can select one of the available gift products</p>
+        </div>
+        
+        <ul class="gift-products-grid grid grid--2-col-tablet-down grid--4-col-desktop" role="list">
+          {%- assign has_products = false -%}
+          {%- assign product_count = 0 -%}
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'gift_product' and product_count < 5 -%}
+              {%- assign product = all_products[block.settings.product] -%}
+              {%- if product and product.available -%}
+                {%- assign has_products = true -%}
+                {%- assign product_count = product_count | plus: 1 -%}
+                <li class="grid__item">
+                  <div class="gift-product-card" 
+                       data-product-id="{{ product.id }}" 
+                       data-block-id="{{ block.id }}"
+                       data-product-title="{{ product.title | escape }}"
+                       data-product-image="{{ product.featured_image | image_url: width: 300 }}"
+                       data-first-variant-id="{% if product.variants.first %}{{ product.variants.first.id }}{% endif %}"
+                       data-first-variant-price="{% if product.variants.first %}{{ product.variants.first.price }}{% endif %}">
+                    <div class="gift-card-inner">
+                      <div class="gift-card-selection">
+                        <input type="radio" 
+                               name="gift-selection-{{ section.id }}" 
+                               id="gift-{{ block.id }}"
+                               class="gift-radio"
+                               value="{{ product.id }}">
+                        <label for="gift-{{ block.id }}" class="gift-card-label">
+                          {%- if product.featured_image -%}
+                            <div class="gift-card-media">
+                              <div class="media media--square">
+                                <img src="{{ product.featured_image | image_url: width: 300 }}" 
+                                     alt="{{ product.title | escape }}"
+                                     loading="lazy"
+                                     width="300"
+                                     height="300">
+                              </div>
+                            </div>
+                          {%- endif -%}
+                          
+                          <div class="gift-card-content">
+                            <h3 class="gift-card-heading h5">
+                              {{ product.title | truncate: 50 }}
+                            </h3>
+                            
+                            {%- if product.variants.size > 1 -%}
+                              <div class="gift-variant-info">
+                                <span class="variant-count">{{ product.variants.size }} variants available</span>
+                              </div>
+                            {%- endif -%}
+                            
+                            <div class="gift-card-check">
+                              <svg class="icon icon-checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                <path d="M20 6L9 17l-5-5"/>
+                              </svg>
+                            </div>
+                          </div>
+                        </label>
+                      </div>
+                      
+                      {%- if product.variants.size > 1 -%}
+                        <div class="gift-variant-selection" style="display: none;">
+                          <div class="gift-select-wrapper">
+                            <select class="gift-variant-select" data-product-id="{{ product.id }}" aria-label="Select variant">
+                              <option value="">Choose variant...</option>
+                              {%- for variant in product.variants -%}
+                                {%- if variant.available -%}
+                                  <option value="{{ variant.id }}" 
+                                          data-title="{{ variant.title | escape }}"
+                                          data-price="{{ variant.price }}"
+                                          data-image="{% if variant.image %}{{ variant.image | image_url: width: 300 }}{% else %}{{ product.featured_image | image_url: width: 300 }}{% endif %}">
+                                    {{ variant.title }}
+                                  </option>
+                                {%- endif -%}
+                              {%- endfor -%}
+                            </select>
+                            <svg aria-hidden="true" focusable="false" class="icon icon-caret" viewBox="0 0 10 6">
+                              <path fill="currentColor" fill-rule="evenodd" d="M9.354.646a.5.5 0 00-.708 0L5 4.293 1.354.646a.5.5 0 00-.708.708l4 4a.5.5 0 00.708 0l4-4a.5.5 0 000-.708z" clip-rule="evenodd"/>
+                            </svg>
+                          </div>
+                        </div>
+                      {%- endif -%}
+                    </div>
+                  </div>
+                </li>
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          
+          {%- unless has_products -%}
+            <li class="gift-products-empty grid__item">
+              <p class="caption-large">
+                No available products. Add products using blocks in the theme editor.
+              </p>
+            </li>
+          {%- endunless -%}
+        </ul>
+        
+        {%- if product_count >= 5 -%}
+          <p class="gift-products-limit caption">Showing maximum 5 gift products</p>
+        {%- endif -%}
       </div>
     </div>
 
     <!-- Success State -->
-    <div class="gift-state gift-state--success" data-state="success" style="{% unless has_gift %}display: none;{% endunless %}">
-      <h3 class="gift-header">
-        <span class="gift-icon">✓</span>
-        {{ section.settings.title }}
-      </h3>
+    <div class="gift-state gift-state--success" data-state="success" style="{% if has_gift %}display: block;{% else %}display: none;{% endif %}">
+      <div class="gift-header gift-header--complete">
+        <svg class="icon icon-checkmark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+        <h3 class="gift-heading h4">{{ section.settings.title }}</h3>
+      </div>
       
-      <div class="gift-success-message">
-        <p><strong>{{ section.settings.success_message }}</strong></p>
-        {%- if selected_gift_info != blank -%}
-          <p class="gift-selected-info-text">Wybrany prezent: {{ selected_gift_info }}</p>
-        {%- endif -%}
+      <div class="gift-success-card">
+        <div class="gift-success-message">
+          <p class="gift-success-text">{{ section.settings.success_message }}</p>
+          {%- if selected_gift_info != blank -%}
+            <p class="gift-selected-info-text caption">Selected gift: <strong>{{ selected_gift_info }}</strong></p>
+          {%- endif -%}
+        </div>
       </div>
     </div>
   </div>
@@ -168,283 +272,662 @@
 </div>
 
 <style>
+  /* Main container */
   .free-gift-threshold {
-    max-width: 1200px;
-    margin: 0 auto 20px;
+    margin-bottom: 5rem;
   }
   
   .gift-container {
-    background: {{ section.settings.background_color }};
-    border: 1px solid {{ section.settings.border_color }};
-    border-radius: 8px;
-    padding: 20px;
-    transition: opacity 0.3s ease;
+    position: relative;
+    border-radius: var(--inputs-radius);
+    padding: 2.4rem;
+    border: 0.1rem solid rgba(var(--color-foreground), 0.08);
   }
   
-  .gift-state {
-    animation: fadeIn 0.3s ease;
+  @media screen and (min-width: 750px) {
+    .gift-container {
+      padding: 3rem;
+    }
   }
   
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  
+  /* Header styling */
   .gift-header {
-    color: {{ section.settings.heading_color }};
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0 0 15px 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 1.2rem;
+    margin-bottom: 2rem;
   }
   
-  .gift-icon {
-    font-size: 20px;
+  .gift-header .icon {
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    color: rgba(var(--color-foreground), 0.75);
   }
   
+  .gift-header--success .icon {
+    color: rgb(16, 185, 129);
+  }
+  
+  .gift-header--complete .icon {
+    color: rgb(16, 185, 129);
+  }
+  
+  .gift-heading {
+    margin: 0;
+    color: rgb(var(--color-foreground));
+  }
+  
+  /* Messages */
   .gift-message {
-    color: {{ section.settings.text_color }};
-    margin-bottom: 15px;
-    font-size: 14px;
+    font-size: 1.5rem;
+    line-height: calc(1 + 0.8 / var(--font-body-scale));
+    color: rgba(var(--color-foreground), 0.75);
+    margin-bottom: 2rem;
   }
   
-  .gift-message strong {
-    color: {{ section.settings.accent_color }};
-    font-size: 16px;
+  .gift-message--success {
+    color: rgb(var(--color-foreground));
+    font-weight: 500;
   }
   
+  .gift-amount {
+    color: rgb(var(--color-foreground));
+    font-weight: 700;
+    font-size: 1.6rem;
+  }
+  
+  /* Fixed Progress Bar Styles */
+  .gift-progress {
+    margin-top: 2rem;
+  }
+
+  .gift-progress-container {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+
   .gift-progress-bar {
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
+    height: 1.2rem;
+    background-color: rgba(var(--color-foreground), 0.1);
+    border-radius: 0.6rem;
     overflow: hidden;
-    margin: 12px 0 8px;
+    position: relative;
+    border: 0.1rem solid rgba(var(--color-foreground), 0.05);
+    width: 100%;
   }
-  
+
   .gift-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #10b981, #059669);
-    transition: width 0.5s ease;
+    background-color: rgb(16, 185, 129) !important;
+    background: linear-gradient(90deg, 
+      rgb(16, 185, 129) 0%, 
+      rgb(5, 150, 105) 100%) !important;
+    transition: width 0.8s ease-out !important;
+    position: relative;
+    border-radius: 0.6rem;
+    display: block;
   }
-  
+
+  .gift-progress-fill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, 
+      rgba(255, 255, 255, 0) 0%, 
+      rgba(255, 255, 255, 0.3) 50%, 
+      rgba(255, 255, 255, 0) 100%);
+    animation: progressShimmer 2s infinite;
+    border-radius: 0.6rem;
+  }
+
+  @keyframes progressShimmer {
+    0% { 
+      transform: translateX(-100%); 
+    }
+    100% { 
+      transform: translateX(100%); 
+    }
+  }
+
+  .gift-progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   .gift-progress-text {
-    font-size: 12px;
-    color: #6b7280;
-    margin: 0;
+    font-size: 1.4rem;
+    color: rgba(var(--color-foreground), 0.75);
+    font-weight: 500;
+  }
+
+  .progress-separator {
+    margin: 0 0.5rem;
+    color: rgba(var(--color-foreground), 0.5);
+  }
+
+  .gift-progress-percentage {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: rgb(16, 185, 129);
+  }
+
+  /* Force progress bar visibility */
+  .gift-progress-fill[style*="width"] {
+    background-color: rgb(16, 185, 129) !important;
+    min-height: 1.2rem !important;
   }
   
-  .gift-products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 12px;
-    max-height: 320px;
-    overflow-y: auto;
-    padding: 15px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    margin-bottom: 15px;
-  }
-  
-  .gift-products-grid::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  .gift-products-grid::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 3px;
-  }
-  
-  .gift-products-grid::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 3px;
-  }
-  
-  .gift-product-card {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    padding: 10px;
+  /* Gift Selection Header */
+  .gift-selection-header {
+    margin-bottom: 2rem;
     text-align: center;
-    transition: all 0.2s ease;
+  }
+  
+  .gift-selection-title {
+    margin: 0 0 0.5rem 0;
+    color: rgb(var(--color-foreground));
+    font-size: 1.8rem;
+  }
+  
+  .gift-selection-subtitle {
+    margin: 0;
+    color: rgba(var(--color-foreground), 0.65);
+    font-size: 1.4rem;
+  }
+  
+  .gift-products-limit {
+    text-align: center;
+    margin-top: 1rem;
+    color: rgba(var(--color-foreground), 0.55);
+  }
+  
+  /* Radio Button Product Cards - FIXED */
+  .gift-card-selection {
+    position: relative;
+    height: 100%;
+  }
+  
+  .gift-radio {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    width: 2rem;
+    height: 2rem;
+    opacity: 0;
     cursor: pointer;
+    z-index: 10;
   }
   
-  .gift-product-card:hover {
-    border-color: {{ section.settings.accent_color }};
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  .gift-card-label {
+    display: block;
+    cursor: pointer;
+    height: 100%;
+    border: 0.2rem solid rgba(var(--color-foreground), 0.08);
+    border-radius: var(--inputs-radius);
+    background: rgb(var(--color-background));
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
   }
   
-  .gift-product-card.selected {
-    border-color: #10b981;
-    background: #f0fdf4;
+  .gift-card-label:hover {
+    transform: translateY(-0.2rem);
+    box-shadow: 0 0.4rem 1.5rem rgba(var(--color-shadow), 0.15);
+    border-color: rgba(var(--color-foreground), 0.15);
   }
   
-  .gift-product-image-wrapper {
-    width: 100%;
-    height: 100px;
-    margin-bottom: 8px;
+  .gift-radio:checked + .gift-card-label {
+    border-color: rgb(16, 185, 129);
+    background: rgba(16, 185, 129, 0.04);
+  }
+  
+  .gift-radio:checked + .gift-card-label .gift-card-check {
+    opacity: 1;
+    transform: scale(1);
+  }
+  
+  /* Visual radio button indicator */
+  .gift-card-label::before {
+    content: '';
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    width: 2rem;
+    height: 2rem;
+    border: 0.2rem solid rgba(var(--color-foreground), 0.3);
+    border-radius: 50%;
+    background: rgb(var(--color-background));
+    transition: all 0.3s ease;
+    z-index: 5;
+  }
+  
+  .gift-radio:checked + .gift-card-label::before {
+    border-color: rgb(16, 185, 129);
+    background: rgb(16, 185, 129);
+  }
+  
+  .gift-radio:checked + .gift-card-label::after {
+    content: '';
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    width: 1rem;
+    height: 1rem;
+    background: white;
+    border-radius: 50%;
+    z-index: 6;
+  }
+  
+  /* Card Check Icon */
+  .gift-card-check {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2.4rem;
+    height: 2.4rem;
+    background: rgb(16, 185, 129);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f9fafb;
-    border-radius: 4px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.3s ease;
+    z-index: 7;
   }
   
-  .gift-product-image {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+  .gift-card-check .icon {
+    width: 1.4rem;
+    height: 1.4rem;
+    color: white;
   }
   
-  .gift-product-title {
-    font-size: 12px;
-    margin: 0 0 8px 0;
-    color: #374151;
-    line-height: 1.3;
-    min-height: 30px;
+  /* Variant Info */
+  .gift-variant-info {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(var(--color-foreground), 0.05);
+    border-radius: 0.3rem;
   }
   
-  .gift-variant-select,
-  .gift-select-btn {
-    width: 100%;
-    padding: 6px;
-    font-size: 12px;
-    border-radius: 4px;
+  .variant-count {
+    font-size: 1.2rem;
+    color: rgba(var(--color-foreground), 0.65);
+    font-style: italic;
+  }
+  
+  /* Variant Selection Panel */
+  .gift-variant-selection {
+    padding: 1.5rem;
+    border-top: 0.1rem solid rgba(var(--color-foreground), 0.08);
+    background: rgba(var(--color-foreground), 0.02);
+    animation: slideDown 0.3s ease;
+  }
+  
+  /* Override product card styles for radio version */
+  .gift-card-selection .gift-card-inner {
+    background: transparent;
+    border: none;
+    overflow: visible;
+    transition: none;
+    transform: none;
+    box-shadow: none;
+    cursor: default;
+  }
+  
+  .gift-card-selection .gift-card-inner:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .gift-card-selection .gift-card-content {
+    padding: 1.5rem;
+  }
+  
+  .gift-card-selection .gift-card-media {
+    background: rgba(var(--color-foreground), 0.04);
+  }
+  .gift-products-wrapper {
+    background: rgba(var(--color-foreground), 0.03);
+    border-radius: var(--inputs-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    max-height: 50rem;
+    overflow-y: auto;
+  }
+  
+  .gift-products-wrapper::-webkit-scrollbar {
+    width: 0.4rem;
+  }
+  
+  .gift-products-wrapper::-webkit-scrollbar-track {
+    background: rgba(var(--color-foreground), 0.05);
+  }
+  
+  .gift-products-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-foreground), 0.15);
+    border-radius: 0.2rem;
+  }
+  
+  .gift-products-grid {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  
+  /* Product Cards */
+  .gift-product-card {
+    position: relative;
+    height: 100%;
+  }
+  
+  .gift-card-inner {
+    background: rgb(var(--color-background));
+    border: 0.1rem solid rgba(var(--color-foreground), 0.08);
+    border-radius: var(--inputs-radius);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform var(--duration-short) ease, 
+                box-shadow var(--duration-short) ease;
     cursor: pointer;
   }
   
+  .gift-product-card:hover .gift-card-inner {
+    transform: translateY(-0.2rem);
+    box-shadow: 0 0.2rem 1rem rgba(var(--color-shadow), 0.1);
+  }
+  
+  .gift-product-card.selected .gift-card-inner {
+    border-color: rgb(16, 185, 129);
+    background: rgba(16, 185, 129, 0.04);
+  }
+  
+  /* Card Media - Square */
+  .gift-card-media {
+    position: relative;
+    padding-bottom: 100%;
+    background: rgba(var(--color-foreground), 0.04);
+    overflow: hidden;
+  }
+  
+  .gift-card-media .media {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  
+  .gift-card-media img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+  
+  /* Card Content */
+  .gift-card-content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+  
+  .gift-card-heading {
+    margin: 0 0 1rem 0;
+    font-size: 1.3rem;
+    line-height: 1.4;
+    min-height: 3.6rem;
+    color: rgb(var(--color-foreground));
+  }
+  
+  /* Select and Actions */
+  .gift-card-actions {
+    margin-top: auto;
+  }
+  
+  .gift-select-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  
   .gift-variant-select {
-    border: 1px solid #d1d5db;
-    background: white;
+    appearance: none;
+    background: rgb(var(--color-background));
+    border: 0.1rem solid rgba(var(--color-foreground), 0.2);
+    border-radius: var(--inputs-radius);
+    color: rgb(var(--color-foreground));
+    cursor: pointer;
+    font-size: 1.3rem;
+    padding: 1rem 3.5rem 1rem 1.5rem;
+    width: 100%;
+    height: 4.2rem;
+    transition: border-color var(--duration-short) ease;
   }
   
-  .gift-select-btn {
-    background: {{ section.settings.button_color }};
-    color: {{ section.settings.button_text_color }};
-    border: none;
-    font-weight: 500;
-    transition: opacity 0.2s;
+  .gift-variant-select:hover {
+    border-color: rgba(var(--color-foreground), 0.4);
   }
   
-  .gift-select-btn:hover {
-    opacity: 0.85;
+  .gift-variant-select:focus {
+    outline: 0;
+    border-color: rgb(var(--color-foreground));
+    box-shadow: 0 0 0 0.1rem rgb(var(--color-foreground));
   }
   
+  .gift-select-wrapper .icon-caret {
+    position: absolute;
+    right: 1.2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    width: 1rem;
+    height: 0.6rem;
+  }
+  
+  .gift-products-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(var(--color-foreground), 0.55);
+  }
+  
+  /* Selected Product Display - MORE EFFICIENT */
   .gift-selected {
-    padding: 15px;
-    background: #f0fdf4;
-    border: 1px solid #10b981;
-    border-radius: 6px;
-    margin-top: 15px;
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: rgba(16, 185, 129, 0.06);
+    border: 0.15rem solid rgb(16, 185, 129);
+    border-radius: var(--inputs-radius);
+    animation: slideDown 0.3s ease;
+  }
+  
+  .gift-selected-header {
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  .gift-selected-heading {
+    margin: 0;
+    color: rgb(16, 185, 129);
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+  
+  .gift-selected-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
   }
   
   .gift-selected-info {
     display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .gift-selected-media {
+    flex-shrink: 0;
+    width: 5rem;
+    height: 5rem;
+    background: rgb(var(--color-background));
+    border-radius: var(--inputs-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem;
+    overflow: hidden;
+    border: 0.1rem solid rgba(var(--color-foreground), 0.1);
   }
   
   .gift-selected-image {
-    width: 60px;
-    height: 60px;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
-    background: white;
-    border-radius: 4px;
-    padding: 4px;
   }
   
-  .gift-selected-details h4 {
-    margin: 0 0 4px 0;
-    color: #065f46;
-    font-size: 13px;
+  .gift-selected-details {
+    flex: 1;
+    text-align: left;
   }
   
   .gift-selected-title {
-    margin: 0;
-    font-size: 14px;
-    color: #374151;
-    font-weight: 500;
-  }
-  
-  .gift-button-primary {
-    width: 100%;
-    padding: 10px 16px;
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
+    margin: 0 0 0.3rem 0;
+    color: rgb(var(--color-foreground));
+    font-size: 1.4rem;
     font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s;
   }
   
-  .gift-button-primary:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
+  .gift-selected-label {
+    color: rgba(var(--color-foreground), 0.65);
+    margin: 0;
+    font-style: italic;
+    font-size: 1.2rem;
   }
   
-  .gift-button-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .gift-selected-actions {
+    text-align: center;
+  }
+  
+  .gift-add-btn {
+    min-height: 4.4rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    position: relative;
+  }
+  
+  /* Responsive selected gift */
+  @media screen and (max-width: 549px) {
+    .gift-selected {
+      padding: 1.2rem;
+    }
+    
+    .gift-selected-info {
+      flex-direction: column;
+      text-align: center;
+    }
+    
+    .gift-selected-details {
+      text-align: center;
+    }
+    
+    .gift-selected-media {
+      width: 4rem;
+      height: 4rem;
+    }
+  }
+  
+  /* Success State */
+  .gift-success-card {
+    background: rgba(16, 185, 129, 0.04);
+    border-left: 0.4rem solid rgb(16, 185, 129);
+    border-radius: var(--inputs-radius);
+    padding: 2rem 0;
   }
   
   .gift-success-message {
-    padding: 12px;
-    background: #f0fdf4;
-    border-left: 3px solid #10b981;
-    border-radius: 4px;
+    padding: 0 2rem;
   }
   
-  .gift-success-message p {
+  .gift-success-text {
     margin: 0;
-    color: #065f46;
-    font-size: 14px;
+    color: rgb(var(--color-foreground));
+    font-weight: 500;
+    font-size: 1.6rem;
+    line-height: 1.5;
   }
   
   .gift-selected-info-text {
-    margin-top: 6px !important;
-    font-size: 13px !important;
-    opacity: 0.9;
+    margin-top: 1rem;
+    margin-bottom: 0;
+    color: rgba(var(--color-foreground), 0.75);
   }
   
-  /* Notification */
+  .gift-selected-info-text strong {
+    color: rgb(var(--color-foreground));
+  }
+  
+  /* Button Overrides */
+  .gift-add-btn {
+    width: 100%;
+    position: relative;
+  }
+  
+  .gift-add-btn .loading-overlay__spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .gift-add-btn .loading-overlay__spinner.hidden {
+    display: none;
+  }
+  
+  .gift-add-btn[aria-busy="true"] span {
+    visibility: hidden;
+  }
+  
+  /* Notification Toast */
   .gift-notification {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 12px 16px;
-    border-radius: 6px;
-    font-size: 14px;
+    top: 2rem;
+    right: 2rem;
+    padding: 1.5rem 2rem;
+    border-radius: var(--inputs-radius);
+    font-size: 1.4rem;
     font-weight: 500;
-    z-index: 99999;
-    max-width: 280px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    animation: slideIn 0.3s ease;
+    z-index: 9999;
+    max-width: 36rem;
+    box-shadow: 0 0.5rem 2.5rem rgba(var(--color-shadow), 0.15);
+    animation: slideInRight var(--duration-default) ease;
+    cursor: pointer;
+    transition: opacity var(--duration-short) ease,
+                transform var(--duration-short) ease;
   }
   
-  .gift-notification--success {
-    background: #10b981;
-    color: white;
-  }
-  
-  .gift-notification--warning {
-    background: #f59e0b;
-    color: white;
-  }
-  
-  .gift-notification--error {
-    background: #ef4444;
-    color: white;
-  }
-  
-  @keyframes slideIn {
+  @keyframes slideInRight {
     from {
-      transform: translateX(100%);
+      transform: translateX(110%);
       opacity: 0;
     }
     to {
@@ -453,734 +936,207 @@
     }
   }
   
-  @media (max-width: 640px) {
-    .gift-products-grid {
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 10px;
-      padding: 12px;
+  .gift-notification--success {
+    background: rgb(16, 185, 129);
+    color: rgb(255, 255, 255);
+  }
+  
+  .gift-notification--warning {
+    background: rgb(245, 158, 11);
+    color: rgb(255, 255, 255);
+  }
+  
+  .gift-notification--error {
+    background: rgb(239, 68, 68);
+    color: rgb(255, 255, 255);
+  }
+  
+  /* Loading State */
+  .gift-threshold-loading {
+    position: relative;
+    pointer-events: none;
+  }
+  
+  .gift-threshold-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(var(--color-background), 0.7);
+    border-radius: var(--inputs-radius);
+    z-index: 1;
+  }
+  
+  /* Responsive */
+  @media screen and (max-width: 749px) {
+    .gift-container {
+      padding: 2rem;
     }
     
-    .gift-container {
-      padding: 15px;
+    .gift-products-wrapper {
+      padding: 1.5rem;
+    }
+    
+    .gift-selected-info {
+      flex-direction: column;
+      text-align: center;
+    }
+    
+    .gift-notification {
+      right: 1rem;
+      left: 1rem;
+      max-width: none;
+    }
+  }
+  
+  @media screen and (max-width: 550px) {
+    .gift-card-content {
+      padding: 1rem;
+    }
+  }
+  
+  /* Animations */
+  .gift-state {
+    animation: fadeIn var(--duration-default) ease;
+  }
+  
+  @keyframes fadeIn {
+    from { 
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Focus states */
+  .gift-select-btn:focus-visible,
+  .gift-add-btn:focus-visible,
+  .gift-variant-select:focus-visible {
+    outline: 0.2rem solid rgba(var(--color-foreground), 0.5);
+    outline-offset: 0.3rem;
+    box-shadow: 0 0 0 0.3rem rgb(var(--color-background)),
+                0 0 0 0.5rem rgba(var(--color-foreground), 0.5);
+  }
+  
+  /* Motion Reduced */
+  @media (prefers-reduced-motion) {
+    .gift-progress-fill,
+    .gift-card-inner,
+    .gift-state,
+    .gift-notification,
+    .gift-selected {
+      animation: none;
+      transition: none;
+    }
+    
+    .gift-progress-fill::after {
+      animation: none;
     }
   }
 </style>
 
-<script>
-(function() {
-  class FreeGiftManager {
-    constructor(section) {
-      this.section = section;
-      this.threshold = parseInt(section.dataset.threshold);
-      this.sectionId = section.dataset.sectionId;
-      this.selectedGift = null;
-      this.isProcessing = false;
-      this.cartData = null;
-      
-      this.init();
-    }
-    
-    async init() {
-      // Get initial cart state
-      await this.fetchCart();
-      
-      // Set up event listeners
-      this.attachEventListeners();
-      
-      // Monitor cart changes
-      this.monitorCartChanges();
-      
-      // Initial UI update
-      this.updateUI();
-    }
-    
-    attachEventListeners() {
-      // Product selection
-      this.section.addEventListener('click', (e) => {
-        if (e.target.classList.contains('gift-select-btn')) {
-          this.selectProduct(e.target);
-        }
-      });
-      
-      // Variant selection
-      this.section.addEventListener('change', (e) => {
-        if (e.target.classList.contains('gift-variant-select')) {
-          this.selectVariant(e.target);
-        }
-      });
-      
-      // Add gift button
-      const addBtn = this.section.querySelector('.gift-add-btn');
-      if (addBtn) {
-        addBtn.addEventListener('click', () => this.addGiftToCart());
-      }
-    }
-    
-    monitorCartChanges() {
-      // Listen to Dawn theme cart events if available
-      if (typeof subscribe !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
-        subscribe(PUB_SUB_EVENTS.cartUpdate, async (event) => {
-          // Skip if this update was triggered by our gift manager
-          if (event.source === 'free-gift-add' || event.source === 'free-gift-remove') {
-            return;
-          }
-          
-          // Fetch fresh cart data
-          await this.fetchCart();
-          this.updateUI();
-        });
-      }
-      
-      // Intercept cart API calls
-      const originalFetch = window.fetch;
-      window.fetch = async (...args) => {
-        const response = await originalFetch.apply(window, args);
-        const url = args[0];
-        
-        if (typeof url === 'string' && 
-            (url.includes('/cart/add') || 
-             url.includes('/cart/update') || 
-             url.includes('/cart/change') || 
-             url.includes('/cart/clear'))) {
-          
-          // Skip if it's our own request
-          const body = args[1]?.body;
-          if (body && body.includes('_is_free_gift')) {
-            return response;
-          }
-          
-          // Wait a bit for cart to update
-          setTimeout(async () => {
-            await this.fetchCart();
-            this.updateUI();
-          }, 100);
-        }
-        
-        return response;
-      };
-      
-      // Listen for quantity changes in cart
-      document.addEventListener('change', async (e) => {
-        if (e.target.matches('[name="updates[]"], .quantity__input')) {
-          setTimeout(async () => {
-            await this.fetchCart();
-            this.updateUI();
-          }, 500);
-        }
-      });
-      
-      // Listen for remove button clicks
-      document.addEventListener('click', async (e) => {
-        if (e.target.closest('cart-remove-button, [href*="/cart/change"], .cart-item__remove')) {
-          setTimeout(async () => {
-            await this.fetchCart();
-            this.updateUI();
-          }, 500);
-        }
-      });
-    }
-    
-    async fetchCart() {
-      try {
-        const response = await fetch(window.Shopify.routes.root + 'cart.js');
-        this.cartData = await response.json();
-        
-        // Store globally for quantity protection
-        window.cartData = this.cartData;
-        
-        // Protect quantities after cart fetch
-        setTimeout(() => {
-          window.protectGiftQuantities && window.protectGiftQuantities();
-        }, 100);
-        
-        return this.cartData;
-      } catch (error) {
-        console.error('Error fetching cart:', error);
-        return null;
-      }
-    }
-    
-    updateUI() {
-      if (!this.cartData) return;
-      
-      const states = {
-        progress: this.section.querySelector('.gift-state--progress'),
-        selector: this.section.querySelector('.gift-state--selector'),
-        success: this.section.querySelector('.gift-state--success')
-      };
-      
-      // Check for existing gift
-      const giftItem = this.cartData.items.find(item => 
-        item.properties && item.properties._is_free_gift === 'true'
-      );
-      const hasGift = !!giftItem;
-      
-      // Determine current state
-      const thresholdMet = this.cartData.total_price >= this.threshold;
-      
-      // Check if gift needs to be removed (has gift but threshold not met)
-      if (hasGift && !thresholdMet) {
-        // Don't update UI yet, wait for gift removal
-        this.removeGift();
-        return;
-      }
-      
-      // Hide all states
-      Object.values(states).forEach(state => {
-        if (state) state.style.display = 'none';
-      });
-      
-      // Show appropriate state
-      if (hasGift) {
-        if (states.success) {
-          states.success.style.display = 'block';
-          this.updateSuccessInfo();
-        }
-      } else if (thresholdMet) {
-        if (states.selector) {
-          states.selector.style.display = 'block';
-        }
-      } else {
-        if (states.progress) {
-          states.progress.style.display = 'block';
-          this.updateProgress();
-        }
-      }
-    }
-    
-    updateProgress() {
-      const remaining = Math.max(0, this.threshold - this.cartData.total_price);
-      const percentage = Math.min((this.cartData.total_price / this.threshold) * 100, 100);
-      
-      // Update remaining amount
-      const remainingEl = this.section.querySelector('.remaining-amount');
-      if (remainingEl) {
-        remainingEl.textContent = this.formatMoney(remaining);
-      }
-      
-      // Update progress bar
-      const progressFill = this.section.querySelector('.gift-progress-fill');
-      if (progressFill) {
-        progressFill.style.width = percentage + '%';
-      }
-      
-      // Update percentage text
-      const percentageEl = this.section.querySelector('.progress-percentage');
-      if (percentageEl) {
-        percentageEl.textContent = Math.round(percentage);
-      }
-    }
-    
-    updateSuccessInfo() {
-      const giftItem = this.cartData.items.find(item => 
-        item.properties && item.properties._is_free_gift === 'true'
-      );
-      
-      if (giftItem) {
-        const infoEl = this.section.querySelector('.gift-selected-info-text');
-        if (infoEl) {
-          let title = giftItem.product_title;
-          if (giftItem.variant_title && giftItem.variant_title !== 'Default Title') {
-            title += ' - ' + giftItem.variant_title;
-          }
-          infoEl.textContent = 'Wybrany prezent: ' + title;
-        }
-      }
-    }
-    
-    selectProduct(button) {
-      // Clear previous selections
-      this.section.querySelectorAll('.gift-product-card').forEach(card => {
-        card.classList.remove('selected');
-      });
-      
-      // Mark as selected
-      const card = button.closest('.gift-product-card');
-      card.classList.add('selected');
-      
-      // Store selection
-      this.selectedGift = {
-        variantId: button.dataset.variantId,
-        title: button.dataset.title,
-        price: button.dataset.price,
-        image: button.dataset.image
-      };
-      
-      this.showSelectedGift();
-    }
-    
-    selectVariant(select) {
-      if (!select.value) return;
-      
-      // Clear previous selections
-      this.section.querySelectorAll('.gift-product-card').forEach(card => {
-        card.classList.remove('selected');
-      });
-      
-      // Mark as selected
-      const card = select.closest('.gift-product-card');
-      card.classList.add('selected');
-      
-      const option = select.options[select.selectedIndex];
-      
-      // Store selection
-      this.selectedGift = {
-        variantId: select.value,
-        title: card.querySelector('.gift-product-title').textContent + 
-               (option.dataset.title !== 'Default Title' ? ' - ' + option.dataset.title : ''),
-        price: option.dataset.price,
-        image: option.dataset.image
-      };
-      
-      this.showSelectedGift();
-    }
-    
-    showSelectedGift() {
-      const selectedDiv = this.section.querySelector('.gift-selected');
-      if (!selectedDiv || !this.selectedGift) return;
-      
-      // Update image
-      const img = selectedDiv.querySelector('.gift-selected-image');
-      if (img) {
-        img.src = this.selectedGift.image;
-        img.alt = this.selectedGift.title;
-      }
-      
-      // Update title
-      const titleEl = selectedDiv.querySelector('.gift-selected-title');
-      if (titleEl) {
-        titleEl.textContent = this.selectedGift.title;
-      }
-      
-      // Show the selected div
-      selectedDiv.style.display = 'block';
-      selectedDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-    
-    async addGiftToCart() {
-      if (this.isProcessing || !this.selectedGift) return;
-      
-      // Security check - verify threshold is met
-      await this.fetchCart();
-      if (this.cartData.total_price < this.threshold) {
-        this.showNotification('Koszyk nie spełnia wymaganego progu', 'error');
-        this.updateUI();
-        return;
-      }
-      
-      // Check if gift already exists
-      const existingGift = this.cartData.items.find(item => 
-        item.properties && item.properties._is_free_gift === 'true'
-      );
-      
-      if (existingGift) {
-        this.showNotification('Prezent jest już w koszyku', 'warning');
-        return;
-      }
-      
-      const button = this.section.querySelector('.gift-add-btn');
-      if (!button) return;
-      
-      this.isProcessing = true;
-      button.disabled = true;
-      button.textContent = 'Dodawanie...';
-      
-      try {
-        const formData = {
-          items: [{
-            id: parseInt(this.selectedGift.variantId),
-            quantity: 1,
-            properties: {
-              '_is_free_gift': 'true',
-              '_original_price': this.selectedGift.price,
-              '_threshold_required': this.threshold.toString()
-            }
-          }]
-        };
-        
-        const response = await fetch(window.Shopify.routes.root + 'cart/add.js', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        });
-        
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.description || 'Błąd dodawania prezentu');
-        }
-        
-        // Show success
-        button.textContent = '✓ Dodano!';
-        this.showNotification('Prezent został dodany do koszyka!', 'success');
-        
-        // Refresh cart
-        await this.fetchCart();
-        this.updateUI();
-        
-        // Trigger cart update event if available
-        if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
-          publish(PUB_SUB_EVENTS.cartUpdate, { source: 'free-gift-add' });
-        }
-        
-      } catch (error) {
-        console.error('Error adding gift:', error);
-        button.textContent = 'Spróbuj ponownie';
-        this.showNotification('Nie można dodać prezentu: ' + error.message, 'error');
-      } finally {
-        this.isProcessing = false;
-        
-        setTimeout(() => {
-          if (button) {
-            button.disabled = false;
-            button.textContent = '{{ section.settings.add_button_text }}';
-          }
-        }, 2000);
-      }
-    }
-    
-    async removeGift() {
-      const giftItem = this.cartData.items.find(item => 
-        item.properties && item.properties._is_free_gift === 'true'
-      );
-      
-      if (!giftItem) return;
-      
-      // Show loading state on section
-      this.section.classList.add('gift-threshold-loading');
-      
-      try {
-        const response = await fetch(window.Shopify.routes.root + 'cart/change.js', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            id: giftItem.key,
-            quantity: 0
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to remove gift');
-        }
-        
-        const updatedCart = await response.json();
-        
-        this.showNotification('Prezent został usunięty (koszyk poniżej progu)', 'warning');
-        
-        // Update local cart data
-        this.cartData = updatedCart;
-        
-        // Update cart UI without page refresh
-        this.updateCartUI(updatedCart);
-        
-        // Update gift section UI
-        this.updateUI();
-        
-        // Trigger Dawn theme cart update if available
-        if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
-          publish(PUB_SUB_EVENTS.cartUpdate, { 
-            source: 'free-gift-remove',
-            cartData: updatedCart
-          });
-        }
-        
-      } catch (error) {
-        console.error('Error removing gift:', error);
-        this.showNotification('Błąd podczas usuwania prezentu', 'error');
-      } finally {
-        this.section.classList.remove('gift-threshold-loading');
-      }
-    }
-    
-    updateCartUI(cartData) {
-      // Update cart count in header if exists
-      const cartCount = document.querySelector('.cart-count-bubble');
-      if (cartCount) {
-        const count = cartCount.querySelector('span[aria-hidden="true"]');
-        if (count) {
-          count.textContent = cartData.item_count;
-        }
-      }
-      
-      // Update cart items if on cart page
-      if (window.location.pathname.includes('/cart')) {
-        // Update cart totals
-        const cartSubtotal = document.querySelector('.totals__subtotal-value');
-        if (cartSubtotal) {
-          cartSubtotal.textContent = this.formatMoney(cartData.items_subtotal_price);
-        }
-        
-        const cartTotal = document.querySelector('.totals__total-value');
-        if (cartTotal) {
-          cartTotal.textContent = this.formatMoney(cartData.total_price);
-        }
-        
-        // Remove gift item row from cart table
-        const giftItem = cartData.items.find(item => 
-          item.properties && item.properties._is_free_gift === 'true'
-        );
-        
-        if (!giftItem) {
-          // Gift was removed, find and remove its row
-          const cartRows = document.querySelectorAll('.cart-item');
-          cartRows.forEach(row => {
-            const titleElement = row.querySelector('.cart-item__name');
-            if (titleElement && titleElement.textContent.includes('PREZENT:')) {
-              row.style.opacity = '0';
-              row.style.transition = 'opacity 0.3s ease';
-              setTimeout(() => {
-                row.remove();
-                // Update row indices
-                this.updateCartRowIndices();
-              }, 300);
-            }
-          });
-        }
-      }
-      
-      // Update cart drawer if open
-      const cartDrawer = document.querySelector('cart-drawer');
-      if (cartDrawer && cartDrawer.classList.contains('active')) {
-        // Trigger cart drawer refresh
-        const cartDrawerItems = document.querySelector('cart-drawer-items');
-        if (cartDrawerItems && cartDrawerItems.onCartUpdate) {
-          cartDrawerItems.onCartUpdate();
-        }
-      }
-    }
-    
-    updateCartRowIndices() {
-      // Re-index cart items after removal
-      const cartItems = document.querySelectorAll('.cart-item');
-      cartItems.forEach((item, index) => {
-        const newIndex = index + 1;
-        // Update IDs
-        if (item.id) {
-          item.id = item.id.replace(/\d+$/, newIndex);
-        }
-        // Update quantity input data-index
-        const quantityInput = item.querySelector('.quantity__input');
-        if (quantityInput) {
-          quantityInput.dataset.index = newIndex;
-        }
-        // Update remove button data-index
-        const removeButton = item.querySelector('cart-remove-button');
-        if (removeButton) {
-          removeButton.dataset.index = newIndex;
-        }
-      });
-    }
-    
-    formatMoney(cents) {
-      return (cents / 100).toFixed(2).replace('.', ',') + ' zł';
-    }
-    
-    showNotification(message, type = 'info') {
-      // Remove existing notifications
-      document.querySelectorAll('.gift-notification').forEach(n => n.remove());
-      
-      const notification = document.createElement('div');
-      notification.className = `gift-notification gift-notification--${type}`;
-      notification.textContent = message;
-      document.body.appendChild(notification);
-      
-      // Auto-remove after 3 seconds
-      setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => notification.remove(), 300);
-      }, 3000);
-      
-      // Click to dismiss
-      notification.addEventListener('click', () => notification.remove());
-    }
-  }
-  
-  // Simple function to disable quantity controls for gift items
-  window.protectGiftQuantities = function() {
-    fetch(window.Shopify.routes.root + 'cart.js')
-      .then(response => response.json())
-      .then(cart => {
-        cart.items.forEach((item, index) => {
-          if (item.properties && item.properties._is_free_gift === 'true') {
-            // Find quantity input by variant ID or index
-            let input = document.querySelector(`input[data-quantity-variant-id="${item.variant_id}"]`) ||
-                       document.querySelector(`#Quantity-${index + 1}`);
-            
-            if (input) {
-              // Disable input
-              input.disabled = true;
-              input.readOnly = true;
-              input.value = 1;
-              
-              // Disable buttons in the same container
-              const container = input.closest('quantity-input');
-              if (container) {
-                container.querySelectorAll('button').forEach(btn => {
-                  btn.disabled = true;
-                });
-              }
-            }
-          }
-        });
-      });
-  };
-  
-  // Run on load and after updates
-  document.addEventListener('DOMContentLoaded', window.protectGiftQuantities);
-  setInterval(window.protectGiftQuantities, 1000);
-  
-  // Initialize when DOM is ready
-  function initGiftThreshold() {
-    document.querySelectorAll('.free-gift-threshold').forEach(section => {
-      if (!section.giftManager) {
-        section.giftManager = new FreeGiftManager(section);
-      }
-    });
-  }
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initGiftThreshold);
-  } else {
-    initGiftThreshold();
-  }
-  
-  // Re-initialize on Shopify section reloads
-  document.addEventListener('shopify:section:load', (event) => {
-    const section = event.target.querySelector('.free-gift-threshold');
-    if (section) {
-      section.giftManager = new FreeGiftManager(section);
-    }
-  });
-})();
-</script>
+<!-- Include JavaScript file -->
+{{ 'free-gift-threshold.js' | asset_url | script_tag }}
 
 {% schema %}
 {
-  "name": "Darmowy Prezent - Próg",
+  "name": "Free Gift - Threshold",
   "tag": "section",
-  "class": "free-gift-section",
-  "blocks": [
-    {
-      "type": "gift_product",
-      "name": "Produkt prezentowy",
-      "settings": [
-        {
-          "type": "product",
-          "id": "product",
-          "label": "Produkt"
-        }
-      ]
-    }
-  ],
+  "class": "section",
   "settings": [
     {
       "type": "header",
-      "content": "⚙️ Konfiguracja"
+      "content": "Configuration"
     },
     {
       "type": "number",
       "id": "threshold",
-      "label": "Próg kwotowy (PLN)",
+      "label": "Threshold amount",
       "default": 250,
-      "info": "Minimalna wartość koszyka do otrzymania prezentu"
+      "info": "Minimum cart value to receive a gift"
     },
     {
       "type": "header",
-      "content": "📝 Teksty"
+      "content": "Text Content"
     },
     {
       "type": "text",
       "id": "title",
-      "label": "Tytuł sekcji",
-      "default": "Darmowy prezent"
+      "label": "Section title",
+      "default": "Free gift with purchases over $250",
+      "info": "Describe how the promotion works - this text will always be visible"
     },
     {
       "type": "textarea",
       "id": "progress_message",
-      "label": "Komunikat przed progiem",
-      "default": "Dodaj produkty za [amount] aby otrzymać darmowy prezent!"
+      "label": "Message before threshold",
+      "default": "Add products worth [amount] to receive a free gift!"
     },
     {
       "type": "text",
       "id": "threshold_message",
-      "label": "Komunikat po osiągnięciu progu",
-      "default": "🎉 Gratulacje! Wybierz swój darmowy prezent:"
+      "label": "Message after reaching threshold",
+      "default": "Congratulations! Choose your free gift:"
     },
     {
       "type": "text",
       "id": "success_message",
-      "label": "Komunikat po dodaniu",
-      "default": "Prezent został dodany do koszyka!"
+      "label": "Message after adding gift",
+      "default": "Gift has been added to your cart!"
     },
     {
       "type": "text",
       "id": "add_button_text",
-      "label": "Tekst przycisku",
-      "default": "Dodaj darmowy prezent"
+      "label": "Button text",
+      "default": "Add free gift"
     },
     {
       "type": "header",
-      "content": "🎨 Wygląd"
+      "content": "Appearance"
     },
     {
       "type": "checkbox",
       "id": "show_progress_bar",
-      "label": "Pokaż pasek postępu",
+      "label": "Show progress bar",
       "default": true
     },
     {
-      "type": "color",
-      "id": "background_color",
-      "label": "Kolor tła",
-      "default": "#ffffff"
-    },
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    }
+  ],
+  "blocks": [
     {
-      "type": "color",
-      "id": "border_color",
-      "label": "Kolor obramowania",
-      "default": "#e5e7eb"
-    },
-    {
-      "type": "color",
-      "id": "heading_color",
-      "label": "Kolor nagłówka",
-      "default": "#1f2937"
-    },
-    {
-      "type": "color",
-      "id": "text_color",
-      "label": "Kolor tekstu",
-      "default": "#4b5563"
-    },
-    {
-      "type": "color",
-      "id": "accent_color",
-      "label": "Kolor akcentu",
-      "default": "#dc2626"
-    },
-    {
-      "type": "color",
-      "id": "button_color",
-      "label": "Kolor przycisku",
-      "default": "#1f2937"
-    },
-    {
-      "type": "color",
-      "id": "button_text_color",
-      "label": "Kolor tekstu przycisku",
-      "default": "#ffffff"
+      "type": "gift_product",
+      "name": "Gift Product",
+      "limit": 5,
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Select gift product",
+          "info": "Product that will be available as a free gift"
+        }
+      ]
     }
   ],
   "presets": [
     {
-      "name": "Darmowy Prezent - Próg",
-      "category": "Promocje"
+      "name": "Free Gift - Threshold",
+      "blocks": [
+        {
+          "type": "gift_product"
+        }
+      ]
     }
   ],
-  "templates": ["cart", "product", "collection", "index"]
+  "max_blocks": 5
 }
 {% endschema %}

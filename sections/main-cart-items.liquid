@@ -17,6 +17,42 @@
       padding-bottom: {{ section.settings.padding_bottom }}px;
     }
   }
+
+  /* Free Gift Styles */
+  .gift-item-disabled {
+    color: rgba(var(--color-foreground), 0.75) !important;
+    cursor: default !important;
+    display: inline-block;
+    text-decoration: none !important;
+    border: none !important;
+    outline: none !important;
+    pointer-events: none;
+  }
+
+  .gift-item-disabled:hover,
+  .gift-item-disabled:focus,
+  .gift-item-disabled:active,
+  .gift-item-disabled:visited {
+    color: rgba(var(--color-foreground), 0.75) !important;
+    text-decoration: none !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .gift-indicator {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: #10b981;
+    color: white;
+    font-size: 10px;
+    border-radius: 3px;
+    font-weight: 500;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
 {%- endstyle -%}
 
 {%- unless settings.cart_type == 'drawer' -%}
@@ -89,7 +125,9 @@
                     <td class="cart-item__media">
                       {%- if item.properties._is_free_sample == 'true' and item.properties._selected_product_image != blank -%}
                         {% comment %} Use selected product image for samples {% endcomment %}
-                        <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+                        {%- unless item.properties._is_free_gift == 'true' or item.properties._disable_link == 'true' -%}
+                          <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+                        {%- endunless -%}
                         <div class="cart-item__image-container gradient global-media-settings">
                           <img
                             src="{{ item.properties._selected_product_image }}"
@@ -103,7 +141,9 @@
                         </div>
                       {%- elsif item.image -%}
                         {% comment %} Regular product image {% endcomment %}
-                        <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+                        {%- unless item.properties._is_free_gift == 'true' or item.properties._disable_link == 'true' -%}
+                          <a href="{{ item.url }}" class="cart-item__link" aria-hidden="true" tabindex="-1"> </a>
+                        {%- endunless -%}
                         <div class="cart-item__image-container gradient {% if item.parent_relationship.parent == null %}global-media-settings{% endif %}">
                           <img
                             src="{{ item.image | image_url: width: 300 }}"
@@ -122,16 +162,33 @@
                         <p class="caption-with-letter-spacing">{{ item.product.vendor }}</p>
                       {%- endif -%}
 
-                      <a href="{{ item.url }}" class="cart-item__name h4 break">
-                        {%- if item.properties._is_free_sample == 'true' and item.properties._selected_product_title -%}
-                          PRÓBKA: {{ item.properties._selected_product_title | escape }}
-                          {%- if item.properties._selected_variant_title and item.properties._selected_variant_title != 'Default' -%}
-                            - {{ item.properties._selected_variant_title | escape }}
+                      {%- comment -%} UPDATED: Conditional product title link {%- endcomment -%}
+                      {%- if item.properties._is_free_gift == 'true' or item.properties._disable_link == 'true' -%}
+                        {%- comment -%} FREE GIFT: Display as non-clickable text {%- endcomment -%}
+                        <span class="cart-item__name h4 break gift-item-disabled">
+                          {%- if item.properties._is_free_sample == 'true' and item.properties._selected_product_title -%}
+                            Free Sample: {{ item.properties._selected_product_title | escape }}
+                            {%- if item.properties._selected_variant_title and item.properties._selected_variant_title != 'Default' -%}
+                              - {{ item.properties._selected_variant_title | escape }}
+                            {%- endif -%}
+                          {%- else -%}
+                            Free Gift: {{ item.product.title | escape }}
                           {%- endif -%}
-                        {%- else -%}
-                          {{ item.product.title | escape }}
-                        {%- endif -%}
-                      </a>
+                          <span class="gift-indicator">GIFT</span>
+                        </span>
+                      {%- else -%}
+                        {%- comment -%} REGULAR PRODUCT: Display as clickable link {%- endcomment -%}
+                        <a href="{{ item.url }}" class="cart-item__name h4 break">
+                          {%- if item.properties._is_free_sample == 'true' and item.properties._selected_product_title -%}
+                            PRÓBKA: {{ item.properties._selected_product_title | escape }}
+                            {%- if item.properties._selected_variant_title and item.properties._selected_variant_title != 'Default' -%}
+                              - {{ item.properties._selected_variant_title | escape }}
+                            {%- endif -%}
+                          {%- else -%}
+                            {{ item.product.title | escape }}
+                          {%- endif -%}
+                        </a>
+                      {%- endif -%}
 
                       {%- if item.original_price != item.final_price -%}
                         <div class="cart-item__discounted-prices">
@@ -260,14 +317,14 @@
                             {%- endif -%}
                             <quantity-input class="quantity cart-quantity">
                               {% assign can_update_quantity = item.instructions.can_update_quantity | default: true %}
-                              {%- if item.properties._is_free_sample == 'true' -%}
+                              {%- if item.properties._is_free_sample == 'true' or item.properties._is_free_gift == 'true' -%}
                                 {% assign can_update_quantity = false %}
                               {%- endif -%}
                               <button
                                 class="quantity__button"
                                 name="minus"
                                 type="button"
-                                {% if item.properties._is_free_sample == 'true' or can_update_quantity == false %}
+                                {% if item.properties._is_free_sample == 'true' or item.properties._is_free_gift == 'true' or can_update_quantity == false %}
                                   disabled
                                 {% endif %}
                               >
@@ -286,7 +343,7 @@
                                 value="{{ item.quantity }}"
                                 {% # theme-check-disable %}
                                 data-cart-quantity="{{ cart | item_count_for_variant: item.variant.id }}"
-                                {% if item.properties._is_free_sample == 'true' %}
+                                {% if item.properties._is_free_sample == 'true' or item.properties._is_free_gift == 'true' %}
                                   min="1"
                                   max="1"
                                   data-min="1"
@@ -302,7 +359,7 @@
                                 aria-label="{{ 'products.product.quantity.input_label' | t: product: item.product.title | escape }}"
                                 id="Quantity-{{ item.index | plus: 1 }}"
                                 data-index="{{ item.index | plus: 1 }}"
-                                {% if item.properties._is_free_sample == 'true' %}
+                                {% if item.properties._is_free_sample == 'true' or item.properties._is_free_gift == 'true' %}
                                   readonly
                                 {% endif %}
                                 {% if can_update_quantity == false %}
@@ -313,7 +370,7 @@
                                 class="quantity__button"
                                 name="plus"
                                 type="button"
-                                {% if item.properties._is_free_sample == 'true' or can_update_quantity == false %}
+                                {% if item.properties._is_free_sample == 'true' or item.properties._is_free_gift == 'true' or can_update_quantity == false %}
                                   disabled
                                 {% endif %}
                               >
