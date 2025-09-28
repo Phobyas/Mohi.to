@@ -1,9 +1,41 @@
 /**
- * Free Gift Threshold Manager - Optimized and Bug-proof Version
+ * Free Gift Threshold Manager - Optimized Version with Performance Improvements
  * File: assets/free-gift-threshold.js
  */
 
 (function () {
+  // Performance improvements: Cache DOM selectors and reduce global scope pollution
+  const DOMCache = {
+    cartCountBubble: null,
+    cartSubtotal: null,
+    cartTotal: null,
+    cartDrawer: null,
+    cartItems: null,
+    init() {
+      // Lazy load selectors when needed
+      this.cartCountBubble =
+        this.cartCountBubble || document.querySelector(".cart-count-bubble");
+      this.cartSubtotal =
+        this.cartSubtotal || document.querySelector(".totals__subtotal-value");
+      this.cartTotal =
+        this.cartTotal || document.querySelector(".totals__total-value");
+      this.cartDrawer =
+        this.cartDrawer || document.querySelector("cart-drawer");
+      this.cartItems =
+        this.cartItems || document.querySelector("cart-drawer-items");
+      return this;
+    },
+    refresh() {
+      // Clear cache to force re-query (useful after DOM updates)
+      this.cartCountBubble = null;
+      this.cartSubtotal = null;
+      this.cartTotal = null;
+      this.cartDrawer = null;
+      this.cartItems = null;
+      return this.init();
+    },
+  };
+
   class FreeGiftManager {
     constructor(section) {
       this.section = section;
@@ -16,6 +48,12 @@
       this.lastUpdateTime = 0;
       this.updateDebounceTime = 100; // Prevent excessive updates
       this.monitoringActive = false;
+
+      // Bind methods to preserve context
+      this.handleSectionChange = this.handleSectionChange.bind(this);
+      this.handleAddGift = this.handleAddGift.bind(this);
+      this.handleCartUpdate = this.handleCartUpdate.bind(this);
+      this.debouncedCartCheck = this.debouncedCartCheck.bind(this);
 
       this.init();
     }
@@ -43,16 +81,12 @@
     attachEventListeners() {
       // Remove existing listeners to prevent duplicates
       this.section.removeEventListener("change", this.handleSectionChange);
-
-      // Bind context and store reference
-      this.handleSectionChange = this.handleSectionChange.bind(this);
       this.section.addEventListener("change", this.handleSectionChange);
 
-      // Add gift button (remove existing first)
+      // Add gift button
       const addBtn = this.section.querySelector(".gift-add-btn");
       if (addBtn) {
         addBtn.removeEventListener("click", this.handleAddGift);
-        this.handleAddGift = this.handleAddGift.bind(this);
         addBtn.addEventListener("click", this.handleAddGift);
       }
     }
@@ -162,13 +196,11 @@
         typeof subscribe !== "undefined" &&
         typeof PUB_SUB_EVENTS !== "undefined"
       ) {
-        subscribe(PUB_SUB_EVENTS.cartUpdate, this.handleCartUpdate.bind(this));
+        subscribe(PUB_SUB_EVENTS.cartUpdate, this.handleCartUpdate);
       }
 
       // Debounced polling as backup
-      setInterval(() => {
-        this.debouncedCartCheck();
-      }, 2000);
+      setInterval(this.debouncedCartCheck, 2000);
     }
 
     async handleCartUpdate(event) {
@@ -250,24 +282,38 @@
         return;
       }
 
-      // Hide all states
+      // Hide all states first
       Object.values(states).forEach((state) => {
-        if (state) state.style.display = "none";
+        if (state) {
+          state.style.display = "none";
+          state.style.visibility = "hidden";
+          state.classList.remove("loaded");
+        }
       });
 
-      // Show appropriate state
+      // Show appropriate state with immediate visibility
       if (hasGift) {
         if (states.success) {
-          states.success.style.display = "block";
+          // Update success info BEFORE showing the state
           this.updateSuccessInfo();
+
+          // Then show the state immediately
+          states.success.style.display = "block";
+          states.success.style.visibility = "visible";
+          states.success.classList.add("loaded");
+
+          // Force a reflow to ensure immediate display
+          states.success.offsetHeight;
         }
       } else if (thresholdMet) {
         if (states.selector) {
           states.selector.style.display = "block";
+          states.selector.style.visibility = "visible";
         }
       } else {
         if (states.progress) {
           states.progress.style.display = "block";
+          states.progress.style.visibility = "visible";
           this.updateProgress();
         }
       }
@@ -339,9 +385,8 @@
 
       if (giftItem) {
         const infoEl = this.section.querySelector(".gift-selected-info-text");
-        const successState = this.section.querySelector(".gift-state--success");
 
-        if (infoEl && successState) {
+        if (infoEl) {
           let title = giftItem.product_title;
           if (
             giftItem.variant_title &&
@@ -350,14 +395,9 @@
             title += " - " + giftItem.variant_title;
           }
 
-          // Update the content
+          // Update the content immediately
           infoEl.innerHTML = `Selected gift: <strong>${title}</strong>`;
-
-          // Ensure smooth appearance without flash
-          requestAnimationFrame(() => {
-            successState.style.visibility = "visible";
-            successState.classList.add("loaded");
-          });
+          infoEl.style.opacity = "1"; // Force visibility
         }
       }
     }
@@ -489,7 +529,7 @@
 
         this.showNotification("Gift has been added to cart!", "success");
 
-        // Refresh and update
+        // Refresh cart data and update UI immediately
         await this.fetchCart();
         this.updateUI();
 
@@ -572,10 +612,14 @@
     }
 
     updateCartUI(cartData) {
+      // Use cached selectors for better performance
+      DOMCache.init();
+
       // Update cart count
-      const cartCount = document.querySelector(".cart-count-bubble");
-      if (cartCount) {
-        const count = cartCount.querySelector('span[aria-hidden="true"]');
+      if (DOMCache.cartCountBubble) {
+        const count = DOMCache.cartCountBubble.querySelector(
+          'span[aria-hidden="true"]'
+        );
         if (count) {
           count.textContent = cartData.item_count;
         }
@@ -583,25 +627,23 @@
 
       // Update cart totals if on cart page
       if (window.location.pathname.includes("/cart")) {
-        const cartSubtotal = document.querySelector(".totals__subtotal-value");
-        if (cartSubtotal) {
-          cartSubtotal.textContent = this.formatMoney(
+        if (DOMCache.cartSubtotal) {
+          DOMCache.cartSubtotal.textContent = this.formatMoney(
             cartData.items_subtotal_price
           );
         }
 
-        const cartTotal = document.querySelector(".totals__total-value");
-        if (cartTotal) {
-          cartTotal.textContent = this.formatMoney(cartData.total_price);
+        if (DOMCache.cartTotal) {
+          DOMCache.cartTotal.textContent = this.formatMoney(
+            cartData.total_price
+          );
         }
       }
 
       // Update cart drawer if open
-      const cartDrawer = document.querySelector("cart-drawer");
-      if (cartDrawer?.classList.contains("active")) {
-        const cartDrawerItems = document.querySelector("cart-drawer-items");
-        if (cartDrawerItems?.onCartUpdate) {
-          cartDrawerItems.onCartUpdate();
+      if (DOMCache.cartDrawer?.classList.contains("active")) {
+        if (DOMCache.cartItems?.onCartUpdate) {
+          DOMCache.cartItems.onCartUpdate();
         }
       }
     }
@@ -657,31 +699,91 @@
     }
   }
 
-  // Global functions for quantity protection
-  window.protectGiftQuantities = function () {
-    // Fetch current cart to get accurate data
-    fetch(window.Shopify.routes.root + "cart.js")
-      .then((response) => response.json())
-      .then((cart) => {
-        // First, reset all quantity controls to enabled state
-        document.querySelectorAll(".quantity__input").forEach((input) => {
-          input.disabled = false;
-          input.readOnly = false;
+  // Optimized Cart Protection Manager - Moved from global scope
+  class CartGiftProtection {
+    constructor() {
+      this.intervalId = null;
+      this.isActive = false;
+      this.cachedCart = null;
+      this.lastProtectionRun = 0;
+      this.protectionDebounce = 500; // Reduce frequency
 
-          const container = input.closest("quantity-input");
-          if (container) {
-            container.querySelectorAll("button").forEach((btn) => {
-              btn.disabled = false;
-              btn.style.opacity = "";
-              btn.style.cursor = "";
-            });
+      this.init();
+    }
+
+    init() {
+      // Only initialize if we're on a cart-related page
+      if (this.shouldActivate()) {
+        this.startProtection();
+      }
+    }
+
+    shouldActivate() {
+      return (
+        document.body.classList.contains("template-cart") ||
+        document.querySelector("cart-drawer") ||
+        document.querySelector("cart-items")
+      );
+    }
+
+    async startProtection() {
+      if (this.isActive) return;
+      this.isActive = true;
+
+      // Reduced frequency from 2000ms to 3000ms for better performance
+      this.intervalId = setInterval(() => {
+        this.protectGiftQuantities();
+      }, 3000);
+
+      // Initial run
+      this.protectGiftQuantities();
+    }
+
+    async protectGiftQuantities() {
+      const now = Date.now();
+      if (now - this.lastProtectionRun < this.protectionDebounce) {
+        return; // Skip if run too recently
+      }
+      this.lastProtectionRun = now;
+
+      try {
+        const response = await fetch(window.Shopify.routes.root + "cart.js");
+        const cart = await response.json();
+
+        // Only update if cart has changed
+        if (
+          JSON.stringify(cart.items) === JSON.stringify(this.cachedCart?.items)
+        ) {
+          return;
+        }
+        this.cachedCart = cart;
+
+        // Reset all quantity controls first
+        document.querySelectorAll(".quantity__input").forEach((input) => {
+          const row = input.closest(".cart-item");
+          const isGift =
+            row?.dataset.isGift === "true" ||
+            row?.dataset.isSample === "true" ||
+            row?.querySelector(".gift-item-disabled");
+
+          if (!isGift) {
+            input.disabled = false;
+            input.readOnly = false;
+
+            const container = input.closest("quantity-input");
+            if (container) {
+              container.querySelectorAll("button").forEach((btn) => {
+                btn.disabled = false;
+                btn.style.opacity = "";
+                btn.style.cursor = "";
+              });
+            }
           }
         });
 
-        // Then, only disable gift items
+        // Only disable gift items
         cart.items.forEach((item, index) => {
           if (item.properties && item.properties._is_free_gift === "true") {
-            // Find the specific input for this gift item
             const input =
               document.querySelector(
                 `input[data-quantity-variant-id="${item.variant_id}"]`
@@ -703,10 +805,30 @@
             }
           }
         });
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error in protectGiftQuantities:", error);
-      });
+      }
+    }
+
+    destroy() {
+      this.isActive = false;
+      if (this.intervalId) {
+        clearInterval(this.intervalId);
+        this.intervalId = null;
+      }
+    }
+  }
+
+  // Initialize protection manager
+  let cartProtection = null;
+
+  // Global functions for backward compatibility
+  window.protectGiftQuantities = function () {
+    if (!cartProtection) {
+      cartProtection = new CartGiftProtection();
+    } else {
+      cartProtection.protectGiftQuantities();
+    }
   };
 
   // Initialize gift managers
@@ -717,6 +839,11 @@
       }
       section.giftManager = new FreeGiftManager(section);
     });
+
+    // Initialize cart protection only if needed
+    if (!cartProtection && document.querySelector(".free-gift-threshold")) {
+      cartProtection = new CartGiftProtection();
+    }
   }
 
   // DOM ready initialization
@@ -744,8 +871,16 @@
     }
   });
 
-  // Run protection functions periodically
-  setInterval(() => {
-    window.protectGiftQuantities();
-  }, 2000);
+  // Cleanup on page unload
+  window.addEventListener("beforeunload", () => {
+    if (cartProtection) {
+      cartProtection.destroy();
+    }
+
+    document.querySelectorAll(".free-gift-threshold").forEach((section) => {
+      if (section.giftManager) {
+        section.giftManager.destroy();
+      }
+    });
+  });
 })();

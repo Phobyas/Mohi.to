@@ -324,19 +324,6 @@
     line-height: calc(1 + 0.8 / var(--font-body-scale));
     color: rgba(var(--color-foreground), 0.75);
     margin-bottom: 2rem;
-    opacity: 0;
-    animation: fadeInMessage 0.4s ease-out 0.1s forwards;
-  }
-
-  @keyframes fadeInMessage {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
   
   .gift-message--success {
@@ -348,19 +335,6 @@
     color: rgb(var(--color-foreground));
     font-weight: 700;
     font-size: 1.6rem;
-    opacity: 0;
-    animation: fadeInAmount 0.3s ease-out 0.25s forwards;
-  }
-
-  @keyframes fadeInAmount {
-    from {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
   }
   
   /* Fixed Progress Bar Styles */

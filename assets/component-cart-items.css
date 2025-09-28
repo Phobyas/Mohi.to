@@ -392,3 +392,131 @@ cart-remove-button .icon-remove {
   height: 100%;
   object-fit: contain;
 }
+
+/* =================================================================
+   FREE GIFT & SAMPLE STYLES - MOVED FROM MAIN-CART-ITEMS.LIQUID
+   ================================================================= */
+
+/* Free Gift Flash Prevention */
+.cart-item__name.gift-item-disabled {
+  color: rgba(var(--color-foreground), 0.75) !important;
+  cursor: default !important;
+  display: inline-block;
+  text-decoration: none !important;
+  border: none !important;
+  outline: none !important;
+  pointer-events: none;
+  opacity: 0;
+  animation: fadeInGiftItem 0.3s ease-out 0.1s forwards;
+}
+
+@keyframes fadeInGiftItem {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cart-item__name.gift-item-disabled:hover,
+.cart-item__name.gift-item-disabled:focus,
+.cart-item__name.gift-item-disabled:active,
+.cart-item__name.gift-item-disabled:visited {
+  color: rgba(var(--color-foreground), 0.75) !important;
+  text-decoration: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.gift-indicator {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: #10b981;
+  color: white;
+  font-size: 10px;
+  border-radius: 3px;
+  font-weight: 500;
+  text-transform: uppercase;
+  vertical-align: middle;
+  opacity: 0;
+  animation: fadeInGiftBadge 0.3s ease-out 0.2s forwards;
+}
+
+@keyframes fadeInGiftBadge {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Prevent flash for strong elements in gift items */
+.cart-item__name.gift-item-disabled strong {
+  opacity: 0;
+  animation: fadeInGiftText 0.3s ease-out 0.15s forwards;
+}
+
+@keyframes fadeInGiftText {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Smooth transitions for cart updates */
+.cart-item {
+  animation: fadeInCartItem 0.4s ease-out;
+}
+
+@keyframes fadeInCartItem {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Disable quantity controls for gift items */
+.cart-item[data-is-gift="true"] .quantity__input,
+.cart-item[data-is-sample="true"] .quantity__input {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.cart-item[data-is-gift="true"] .quantity__button,
+.cart-item[data-is-sample="true"] .quantity__button {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Visual indicators for protected items */
+.cart-item[data-is-gift="true"],
+.cart-item[data-is-sample="true"] {
+  border-left: 3px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Motion reduced preferences */
+@media (prefers-reduced-motion: reduce) {
+  .cart-item__name.gift-item-disabled,
+  .gift-indicator,
+  .cart-item__name.gift-item-disabled strong,
+  .cart-item {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
