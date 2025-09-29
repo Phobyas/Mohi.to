@@ -39,53 +39,53 @@
         "padding_bottom": 40
       }
     },
-    "free_gift_threshold_eFJfPy": {
+    "free_gift_threshold_HNYgYK": {
       "type": "free-gift-threshold",
       "blocks": {
-        "gift_product_wPwpXX": {
+        "gift_product_eBrw3e": {
           "type": "gift_product",
           "settings": {
-            "product": "labubu-macarons-latte-copy"
+            "product": "labubu-have-a-seat-sisi-copy"
           }
         },
-        "gift_product_h7tbCR": {
+        "gift_product_aRpyLC": {
           "type": "gift_product",
           "settings": {
             "product": "labubu-macarons-brazowy-copy"
           }
         },
-        "gift_product_GRCRYp": {
+        "gift_product_tF3CfP": {
           "type": "gift_product",
           "settings": {
-            "product": "labubu-have-a-seat-sisi-copy"
+            "product": "labubu-macarons-jasnoniebieski-copy"
           }
         }
       },
       "block_order": [
-        "gift_product_wPwpXX",
-        "gift_product_h7tbCR",
-        "gift_product_GRCRYp"
+        "gift_product_eBrw3e",
+        "gift_product_aRpyLC",
+        "gift_product_tF3CfP"
       ],
-      "name": "Free Gift For Beloved User",
+      "name": "Free Gift - Threshold",
       "settings": {
         "threshold": 6000,
-        "title": "Free Gift",
-        "progress_message": "Add product for [amount] to get a free gift!",
-        "threshold_message": "🎉 Congratulations! Pick your free gift!",
-        "success_message": "Gift has been added to cart!",
-        "add_button_text": "Add Free Gift",
+        "title": "Free gift with purchases over $250",
+        "progress_message": "Add products worth [amount] to receive a free gift!",
+        "threshold_message": "Congratulations! Choose your free gift:",
+        "success_message": "Gift has been added to your cart!",
+        "add_button_text": "Add free gift",
         "empty_cart_message": "Your cart is empty. Add products to receive a free gift!",
         "color_scheme": "",
         "show_progress_bar": true,
         "progress_bar_height": 1.2,
         "progress_bar_radius": 0.6,
-        "progress_bg_color": "#ff213c",
-        "progress_fill_color": "#9210b9",
-        "progress_fill_color_end": "#810596",
-        "selection_color": "#441261",
-        "success_color": "#9910b9",
-        "warning_color": "#890bf5",
-        "error_color": "#ef44e2",
+        "progress_bg_color": "#f3f4f6",
+        "progress_fill_color": "#10b981",
+        "progress_fill_color_end": "#059669",
+        "selection_color": "#10b981",
+        "success_color": "#10b981",
+        "warning_color": "#f59e0b",
+        "error_color": "#ef4444",
         "max_gifts_displayed": 5
       }
     }
@@ -93,6 +93,6 @@
   "order": [
     "cart-items",
     "cart-footer",
-    "free_gift_threshold_eFJfPy"
+    "free_gift_threshold_HNYgYK"
   ]
 }
