@@ -1,0 +1,104 @@
+{%- capture gift_ids -%}
+{%- assign gift_collection = collections['free-sample'] -%}
+{%- for product in gift_collection.products -%}
+  {%- for variant in product.variants -%}
+    "{{ variant.id }}"{% unless forloop.last %},{% endunless %}
+  {%- endfor -%}
+  {%- unless forloop.last %},{% endunless -%}
+{%- endfor -%}
+{%- endcapture -%}
+
+<script>
+(function() {
+  if (window.giftProtectionActive) return;
+  window.giftProtectionActive = true;
+  
+  const giftIds = new Set([{{ gift_ids }}]);
+  let isValidating = false;
+  
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const [url, options] = args;
+    
+    if (url.includes('/cart/add.js') && options?.method === 'POST') {
+      try {
+        const body = JSON.parse(options.body);
+        const items = Array.isArray(body.items) ? body.items : [body];
+        
+        for (const item of items) {
+          if (giftIds.has(String(item.id)) && !item.properties?._is_free_gift) {
+            return new Response(JSON.stringify({
+              status: 422,
+              message: 'You Naughty! No Labubu For You!'
+            }), {
+              status: 422,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        }
+      } catch (e) {}
+    }
+    
+    const response = await originalFetch.apply(this, args);
+    
+    if (response.ok && url.includes('/cart/') && options?.method === 'POST') {
+      setTimeout(() => validateAndClean(), 300);
+    }
+    
+    return response;
+  };
+  
+  async function validateAndClean() {
+    if (isValidating) return;
+    isValidating = true;
+    
+    try {
+      const cart = await fetch('/cart.js').then(r => r.json());
+      const updates = {};
+      
+      for (const item of cart.items) {
+        if (giftIds.has(String(item.variant_id)) && !item.properties?._is_free_gift) {
+          updates[item.key] = 0;
+        }
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        await fetch('/cart/update.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates })
+        });
+        
+        if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
+          publish(PUB_SUB_EVENTS.cartUpdate, { source: 'gift-protection' });
+        }
+      }
+    } catch (e) {
+    } finally {
+      isValidating = false;
+    }
+  }
+  
+  if (typeof subscribe !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
+    subscribe(PUB_SUB_EVENTS.cartUpdate, (event) => {
+      if (event.source !== 'gift-protection') {
+        setTimeout(() => validateAndClean(), 200);
+      }
+    });
+  }
+  
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('[name="checkout"], [href*="/checkout"]')) {
+      e.preventDefault();
+      await validateAndClean();
+      setTimeout(() => {
+        const target = e.target.closest('[name="checkout"], [href*="/checkout"]');
+        if (target.href) window.location.href = target.href;
+        else target.form?.submit();
+      }, 400);
+    }
+  }, true);
+  
+  validateAndClean();
+})();
+</script>

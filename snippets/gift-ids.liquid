@@ -1,0 +1,10 @@
+{%- capture gift_ids -%}
+{%- assign gift_products = collections['gifts'].products -%}
+{%- for product in gift_products -%}
+  {%- for variant in product.variants -%}
+    "{{ variant.id }}"{% unless forloop.last %},{% endunless %}
+  {%- endfor -%}
+  {%- unless forloop.last %},{% endunless -%}
+{%- endfor -%}
+{%- endcapture -%}
+<script>window.giftVariantIds = [{{ gift_ids }}];</script>
