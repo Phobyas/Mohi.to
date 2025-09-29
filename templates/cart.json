@@ -45,25 +45,19 @@
         "gift_product_wPwpXX": {
           "type": "gift_product",
           "settings": {
-            "product": "labubu-macarons-latte-copy",
-            "custom_title": "testtt",
-            "featured": false
+            "product": "labubu-macarons-latte-copy"
           }
         },
         "gift_product_h7tbCR": {
           "type": "gift_product",
           "settings": {
-            "product": "labubu-macarons-brazowy-copy",
-            "custom_title": "",
-            "featured": false
+            "product": "labubu-macarons-brazowy-copy"
           }
         },
         "gift_product_GRCRYp": {
           "type": "gift_product",
           "settings": {
-            "product": "labubu-have-a-seat-sisi-copy",
-            "custom_title": "",
-            "featured": false
+            "product": "labubu-have-a-seat-sisi-copy"
           }
         }
       },
@@ -74,8 +68,7 @@
       ],
       "name": "Darmowy Prezent - Próg",
       "settings": {
-        "threshold": 2500,
-        "enabled": true,
+        "threshold": 6000,
         "title": "Free Gift",
         "progress_message": "Add product for [amount] to get a free gift!",
         "threshold_message": "🎉 Congratulations! Pick your free gift!",
@@ -84,11 +77,7 @@
         "empty_cart_message": "Your cart is empty. Add products to receive a free gift!",
         "color_scheme": "",
         "show_progress_bar": true,
-        "section_padding_top": 36,
-        "section_padding_bottom": 36,
-        "max_gifts_displayed": 5,
-        "auto_remove_gifts": true,
-        "prevent_multiple_gifts": true
+        "max_gifts_displayed": 5
       }
     }
   },
