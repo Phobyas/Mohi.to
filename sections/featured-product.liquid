@@ -72,7 +72,7 @@
       <div class="product product--{{ section.settings.media_size }} grid grid--1-col gradient color-{{ section.settings.color_scheme }} product--{{ section.settings.media_position }}{% if section.settings.secondary_background == false %} isolate{% endif %} {% if product.media.size > 0 or section.settings.product == blank %}grid--2-col-tablet{% else %}product--no-media{% endif %}">
         <div class="grid__item product__media-wrapper">
           {%- unless placeholder -%}
-            <div class="product-badges">
+            {% comment %} <div class="product-badges">
               {% if product.available == false %}
                 <span class="product-badge product-badge--soldout">Sold Out</span>
               {% elsif product.compare_at_price > product.price %}
@@ -85,7 +85,7 @@
               {% if product.metafields.custom.is_limited == true %}
                 <span class="product-badge product-badge--limited">Limited</span>
               {% endif %}
-            </div>
+            </div> {% endcomment %}
             {% render 'product-media-gallery', product: product, variant_images: variant_images, limit: 1 %}
           {%- else -%}
             <div class="product__media-item">

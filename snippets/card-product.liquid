@@ -1,4 +1,4 @@
-<!-- Enhanced Product Card Component for Shopify Dawn Theme - Modern Streetwear Store -->
+
 {% comment %}
   Renders a product card for streetwear store
 
@@ -116,37 +116,7 @@
   </a>
 </article>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Simplified product card interactions
-    const productCards = document.querySelectorAll('.streetwear-product-card');
-    
-    productCards.forEach(card => {
-      card.addEventListener('mouseenter', function() {
-        // Add any hover interactions here if needed
-      });
-      
-      card.addEventListener('mouseleave', function() {
-        // Remove hover interactions here if needed
-      });
-    });
-  });
-</script><!-- Enhanced Product Card Component for Shopify Dawn Theme - Modern Streetwear Store -->
-{% comment %}
-  Renders a product card for streetwear store
 
-  Accepts:
-  - card_product: {Object} Product Liquid object (optional)
-  - media_aspect_ratio: {String} Size of the product image card. Values are "square" and "portrait". Default is "portrait" (optional)
-  - show_secondary_image: {Boolean} Show the secondary image on hover. Default: true (optional)
-  - show_vendor: {Boolean} Show the product vendor. Default: false
-  - show_rating: {Boolean} Show the product rating. Default: false
-  - show_quick_add: {Boolean} Show the quick add button. Default: true
-  - section_id: {String} The ID of the section that contains this card.
-
-  Usage:
-  {% render 'card-product-streetwear', card_product: product %}
-{% endcomment %}
 
 <style>
   .streetwear-product-card {
