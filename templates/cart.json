@@ -77,6 +77,15 @@
         "empty_cart_message": "Your cart is empty. Add products to receive a free gift!",
         "color_scheme": "",
         "show_progress_bar": true,
+        "progress_bar_height": 1.2,
+        "progress_bar_radius": 0.6,
+        "progress_bg_color": "#ff213c",
+        "progress_fill_color": "#9210b9",
+        "progress_fill_color_end": "#810596",
+        "selection_color": "#441261",
+        "success_color": "#9910b9",
+        "warning_color": "#890bf5",
+        "error_color": "#ef44e2",
         "max_gifts_displayed": 5
       }
     }
