@@ -301,7 +301,132 @@
         document.documentElement.classList.add('shopify-design-mode');
       }
     </script>
+
+{% comment %} Prevent Naughty Users {% endcomment %}
+<script>
+(function() {
+  if (window.giftProtectionActive) return;
+  window.giftProtectionActive = true;
+  
+  const giftIds = new Set([
+    '52521879568648',
+    '52521878257928',
+    '52521878028552'
+  ]);
+  
+  // Update from page
+  function updateGiftIds() {
+    document.querySelectorAll('.gift-product-card').forEach(card => {
+      const vid = card.dataset.firstVariantId;
+      if (vid) giftIds.add(vid);
+      card.querySelectorAll('.gift-variant-select option[value]').forEach(opt => {
+        if (opt.value) giftIds.add(opt.value);
+      });
+    });
+  }
+  
+  updateGiftIds();
+  document.addEventListener('DOMContentLoaded', updateGiftIds);
+  document.addEventListener('shopify:section:load', updateGiftIds);
+  
+  // Block at API level
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const [url, options] = args;
+    
+    if (url.includes('/cart/add.js') && options?.method === 'POST') {
+      try {
+        const body = JSON.parse(options.body);
+        const items = Array.isArray(body.items) ? body.items : [body];
+        
+        for (const item of items) {
+          if (giftIds.has(String(item.id)) && !item.properties?._is_free_gift) {
+            return new Response(JSON.stringify({
+              status: 422,
+              message: 'You Naughty! No Labubu for you!'
+            }), {
+              status: 422,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        }
+      } catch (e) {}
+    }
+    
+    // Revalidate after any cart modification
+    const response = await originalFetch.apply(this, args);
+    
+    if (response.ok && url.includes('/cart/') && options?.method === 'POST') {
+      setTimeout(() => validateAndClean(), 200);
+    }
+    
+    return response;
+  };
+  
+  // Validate and clean cart
+  async function validateAndClean() {
+    try {
+      const cart = await fetch('/cart.js').then(r => r.json());
+      const updates = {};
+      
+      for (const item of cart.items) {
+        if (giftIds.has(String(item.variant_id)) && !item.properties?._is_free_gift) {
+          updates[item.key] = 0;
+        }
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        await fetch('/cart/update.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates })
+        });
+        
+        // Trigger cart refresh
+        document.dispatchEvent(new CustomEvent('cart:refresh'));
+        
+        if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
+          publish(PUB_SUB_EVENTS.cartUpdate, { source: 'gift-protection' });
+        }
+      }
+    } catch (e) {}
+  }
+  
+  // Also validate on these events
+  document.addEventListener('cart:add', () => validateAndClean());
+  document.addEventListener('cart:update', () => validateAndClean());
+  
+  // Dawn theme
+  if (typeof subscribe !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
+    subscribe(PUB_SUB_EVENTS.cartUpdate, (event) => {
+      if (event.source !== 'gift-protection') {
+        validateAndClean();
+      }
+    });
+  }
+  
+  // Before checkout
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('[name="checkout"], [href*="/checkout"]')) {
+      e.preventDefault();
+      await validateAndClean();
+      setTimeout(() => {
+        const target = e.target.closest('[name="checkout"], [href*="/checkout"]');
+        if (target.href) window.location.href = target.href;
+        else target.form?.submit();
+      }, 300);
+    }
+  }, true);
+  
+  // Validate on page load
+  validateAndClean();
+})();
+</script>
+
+
   </head>
+
+
 
   <body class="gradient{% if settings.animations_hover_elements != 'none' %} animate--hover-{{ settings.animations_hover_elements }}{% endif %}">
     <a class="skip-to-content-link button visually-hidden" href="#MainContent">

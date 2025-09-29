@@ -293,11 +293,11 @@
   }
   
   .gift-header--success .icon {
-    color: rgb(16, 185, 129);
+    color: {{ section.settings.success_color }};
   }
   
   .gift-header--complete .icon {
-    color: rgb(16, 185, 129);
+    color: {{ section.settings.success_color }};
   }
   
   .gift-heading {
@@ -333,9 +333,9 @@
   }
 
   .gift-progress-bar {
-    height: 1.2rem;
-    background-color: rgba(var(--color-foreground), 0.1);
-    border-radius: 0.6rem;
+    height: {{ section.settings.progress_bar_height }}rem;
+    background-color: {{ section.settings.progress_bg_color }};
+    border-radius: {{ section.settings.progress_bar_radius }}rem;
     overflow: hidden;
     position: relative;
     border: 0.1rem solid rgba(var(--color-foreground), 0.05);
@@ -344,13 +344,12 @@
 
   .gift-progress-fill {
     height: 100%;
-    background-color: rgb(16, 185, 129) !important;
+    background-color: {{ section.settings.progress_fill_color }} !important;
     background: linear-gradient(90deg, 
-      rgb(16, 185, 129) 0%, 
-      rgb(5, 150, 105) 100%) !important;
+      {{ section.settings.progress_fill_color }} 0%, 
+      {{ section.settings.progress_fill_color_end }} 100%) !important;
     transition: width 0.8s ease-out !important;
     position: relative;
-    border-radius: 0.6rem;
     display: block;
   }
 
@@ -366,7 +365,7 @@
       rgba(255, 255, 255, 0.3) 50%, 
       rgba(255, 255, 255, 0) 100%);
     animation: progressShimmer 2s infinite;
-    border-radius: 0.6rem;
+    border-radius: {{ section.settings.progress_bar_radius }}rem;
   }
 
   @keyframes progressShimmer {
@@ -398,29 +397,47 @@
   .gift-progress-percentage {
     font-size: 1.4rem;
     font-weight: 700;
-    color: rgb(16, 185, 129);
+    color: {{ section.settings.progress_fill_color }};
   }
 
   .gift-progress-fill[style*="width"] {
-    background-color: rgb(16, 185, 129) !important;
-    min-height: 1.2rem !important;
+    background-color: {{ section.settings.progress_fill_color }} !important;
+    min-height: {{ section.settings.progress_bar_height }}rem !important;
   }
   
   .gift-selection-header {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     text-align: center;
+  }
+  
+  @media screen and (min-width: 750px) {
+    .gift-selection-header {
+      margin-bottom: 2rem;
+    }
   }
   
   .gift-selection-title {
     margin: 0 0 0.5rem 0;
     color: rgb(var(--color-foreground));
-    font-size: 1.8rem;
+    font-size: 1.6rem;
+  }
+  
+  @media screen and (min-width: 750px) {
+    .gift-selection-title {
+      font-size: 1.8rem;
+    }
   }
   
   .gift-selection-subtitle {
     margin: 0;
     color: rgba(var(--color-foreground), 0.65);
-    font-size: 1.4rem;
+    font-size: 1.3rem;
+  }
+  
+  @media screen and (min-width: 750px) {
+    .gift-selection-subtitle {
+      font-size: 1.4rem;
+    }
   }
   
   .gift-products-limit {
@@ -432,10 +449,15 @@
   .gift-products-wrapper {
     background: rgba(var(--color-foreground), 0.03);
     border-radius: var(--inputs-radius);
-    padding: 5rem 3rem 3rem 3rem;
+    padding: 2rem 1.5rem;
     margin-bottom: 2rem;
-    max-height: 55rem;
     overflow: visible;
+  }
+  
+  @media screen and (min-width: 750px) {
+    .gift-products-wrapper {
+      padding: 3rem 2rem;
+    }
   }
   
   .gift-products-wrapper::-webkit-scrollbar {
@@ -461,21 +483,20 @@
     gap: 1.5rem;
     flex-wrap: wrap;
     overflow: visible;
-    padding: 2.5rem 2rem 2rem 2rem;
   }
   
   .gift-products-grid .grid__item {
     flex: 0 0 auto;
-    max-width: 25rem;
     width: 100%;
     overflow: visible !important;
-    margin: 1.5rem 1rem 1rem 1rem;
+    margin: 0;
     position: relative;
   }
   
   @media screen and (min-width: 550px) {
     .gift-products-grid .grid__item {
       width: calc(50% - 0.75rem);
+      max-width: 25rem;
     }
   }
   
@@ -511,8 +532,8 @@
   }
   
   .gift-product-card.selected .gift-card-inner {
-    border-color: rgb(16, 185, 129);
-    background: rgba(16, 185, 129, 0.04);
+    border-color: {{ section.settings.selection_color }};
+    background: {{ section.settings.selection_color | color_modify: 'alpha', 0.04 }};
   }
   
   .gift-card-selection {
@@ -551,16 +572,16 @@
   }
   
   .gift-radio:checked + .gift-card-label {
-    border-color: rgb(16, 185, 129);
-    background: rgba(16, 185, 129, 0.04);
-    box-shadow: 0 0 0 1px rgb(16, 185, 129);
+    border-color: {{ section.settings.selection_color }};
+    background: {{ section.settings.selection_color | color_modify: 'alpha', 0.04 }};
+    box-shadow: 0 0 0 1px {{ section.settings.selection_color }};
     z-index: 5;
   }
   
   .gift-radio:checked + .gift-card-label:hover {
     z-index: 15;
-    box-shadow: 0 0.4rem 1.5rem rgba(16, 185, 129, 0.2), 
-                0 0 0 1px rgb(16, 185, 129);
+    box-shadow: 0 0.4rem 1.5rem {{ section.settings.selection_color | color_modify: 'alpha', 0.2 }}, 
+                0 0 0 1px {{ section.settings.selection_color }};
   }
   
   .gift-radio:checked + .gift-card-label .gift-card-check {
@@ -583,8 +604,8 @@
   }
   
   .gift-radio:checked + .gift-card-label::before {
-    border-color: rgb(16, 185, 129);
-    background: rgb(16, 185, 129);
+    border-color: {{ section.settings.selection_color }};
+    background: {{ section.settings.selection_color }};
   }
   
   .gift-radio:checked + .gift-card-label::after {
@@ -605,7 +626,7 @@
     right: 1rem;
     width: 2.4rem;
     height: 2.4rem;
-    background: rgb(16, 185, 129);
+    background: {{ section.settings.selection_color }};
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -638,7 +659,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.5rem;
+    padding: 1rem;
+  }
+  
+  @media screen and (min-width: 750px) {
+    .gift-card-media .media {
+      padding: 1.5rem;
+    }
   }
   
   .gift-card-media img {
@@ -650,18 +677,32 @@
   }
   
   .gift-card-content {
-    padding: 1.5rem;
+    padding: 1.2rem;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
   }
   
+  @media screen and (min-width: 750px) {
+    .gift-card-content {
+      padding: 1.5rem;
+    }
+  }
+  
   .gift-card-heading {
-    margin: 0 0 1rem 0;
-    font-size: 1.3rem;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
     line-height: 1.4;
-    min-height: 3.6rem;
+    min-height: 3rem;
     color: rgb(var(--color-foreground));
+  }
+  
+  @media screen and (min-width: 750px) {
+    .gift-card-heading {
+      font-size: 1.3rem;
+      min-height: 3.6rem;
+      margin-bottom: 1rem;
+    }
   }
   
   .gift-variant-info {
@@ -678,10 +719,16 @@
   }
   
   .gift-variant-selection {
-    padding: 1.5rem;
+    padding: 1.2rem;
     border-top: 0.1rem solid rgba(var(--color-foreground), 0.08);
     background: rgba(var(--color-foreground), 0.02);
     animation: slideDown 0.3s ease;
+  }
+  
+  @media screen and (min-width: 750px) {
+    .gift-variant-selection {
+      padding: 1.5rem;
+    }
   }
   
   .gift-card-selection .gift-card-inner {
@@ -762,8 +809,8 @@
   .gift-selected {
     margin: 1.5rem 0;
     padding: 1.5rem;
-    background: rgba(16, 185, 129, 0.06);
-    border: 0.15rem solid rgb(16, 185, 129);
+    background: {{ section.settings.selection_color | color_modify: 'alpha', 0.06 }};
+    border: 0.15rem solid {{ section.settings.selection_color }};
     border-radius: var(--inputs-radius);
     animation: slideDown 0.3s ease;
   }
@@ -775,7 +822,7 @@
   
   .gift-selected-heading {
     margin: 0;
-    color: rgb(16, 185, 129);
+    color: {{ section.settings.selection_color }};
     font-size: 1.4rem;
     font-weight: 600;
   }
@@ -868,8 +915,8 @@
   }
   
   .gift-success-card {
-    background: rgba(16, 185, 129, 0.04);
-    border-left: 0.4rem solid rgb(16, 185, 129);
+    background: {{ section.settings.success_color | color_modify: 'alpha', 0.04 }};
+    border-left: 0.4rem solid {{ section.settings.success_color }};
     border-radius: var(--inputs-radius);
     padding: 2rem 0;
   }
@@ -962,17 +1009,17 @@
   }
   
   .gift-notification--success {
-    background: rgb(16, 185, 129);
+    background: {{ section.settings.success_color }};
     color: rgb(255, 255, 255);
   }
   
   .gift-notification--warning {
-    background: rgb(245, 158, 11);
+    background: {{ section.settings.warning_color }};
     color: rgb(255, 255, 255);
   }
   
   .gift-notification--error {
-    background: rgb(239, 68, 68);
+    background: {{ section.settings.error_color }};
     color: rgb(255, 255, 255);
   }
   
@@ -1011,12 +1058,6 @@
       right: 1rem;
       left: 1rem;
       max-width: none;
-    }
-  }
-  
-  @media screen and (max-width: 550px) {
-    .gift-card-content {
-      padding: 1rem;
     }
   }
   
@@ -1142,10 +1183,82 @@
       "default": "scheme-1"
     },
     {
+      "type": "header",
+      "content": "Progress Bar"
+    },
+    {
       "type": "checkbox",
       "id": "show_progress_bar",
       "label": "Show progress bar",
       "default": true
+    },
+    {
+      "type": "range",
+      "id": "progress_bar_height",
+      "min": 0.6,
+      "max": 3,
+      "step": 0.2,
+      "unit": "rem",
+      "label": "Progress bar height",
+      "default": 1.2
+    },
+    {
+      "type": "range",
+      "id": "progress_bar_radius",
+      "min": 0,
+      "max": 2,
+      "step": 0.1,
+      "unit": "rem",
+      "label": "Progress bar radius",
+      "default": 0.6
+    },
+    {
+      "type": "color",
+      "id": "progress_bg_color",
+      "label": "Progress bar background",
+      "default": "#f3f4f6"
+    },
+    {
+      "type": "color",
+      "id": "progress_fill_color",
+      "label": "Progress fill color (start)",
+      "default": "#10b981"
+    },
+    {
+      "type": "color",
+      "id": "progress_fill_color_end",
+      "label": "Progress fill color (end)",
+      "default": "#059669"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "selection_color",
+      "label": "Selection color",
+      "default": "#10b981",
+      "info": "Used for selected products and highlights"
+    },
+    {
+      "type": "color",
+      "id": "success_color",
+      "label": "Success color",
+      "default": "#10b981",
+      "info": "Used for success messages and icons"
+    },
+    {
+      "type": "color",
+      "id": "warning_color",
+      "label": "Warning color",
+      "default": "#f59e0b"
+    },
+    {
+      "type": "color",
+      "id": "error_color",
+      "label": "Error color",
+      "default": "#ef4444"
     },
     {
       "type": "header",
