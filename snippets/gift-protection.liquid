@@ -29,7 +29,7 @@
           if (giftIds.has(String(item.id)) && !item.properties?._is_free_gift) {
             return new Response(JSON.stringify({
               status: 422,
-              message: 'You Naughty! No Labubu For You!'
+              message: 'You Naughty! No Labubu For You!',
             }), {
               status: 422,
               headers: { 'Content-Type': 'application/json' }
@@ -86,18 +86,6 @@
       }
     });
   }
-  
-  document.addEventListener('click', async (e) => {
-    if (e.target.closest('[name="checkout"], [href*="/checkout"]')) {
-      e.preventDefault();
-      await validateAndClean();
-      setTimeout(() => {
-        const target = e.target.closest('[name="checkout"], [href*="/checkout"]');
-        if (target.href) window.location.href = target.href;
-        else target.form?.submit();
-      }, 400);
-    }
-  }, true);
   
   validateAndClean();
 })();
