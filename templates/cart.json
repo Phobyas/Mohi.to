@@ -68,7 +68,7 @@
       ],
       "name": "Darmowy Prezent - Próg",
       "settings": {
-        "threshold": 2500,
+        "threshold": 6000,
         "title": "Free Gift",
         "progress_message": "Add product for [amount] to get a free gift!",
         "threshold_message": "🎉 Congratulations! Pick your free gift!",
