@@ -69,7 +69,7 @@
       "name": "Free Gift - Threshold",
       "settings": {
         "threshold": 6000,
-        "title": "Free gift with purchases over $250",
+        "title": "Free gift",
         "progress_message": "Add products worth [amount] to receive a free gift!",
         "threshold_message": "Congratulations! Choose your free gift:",
         "success_message": "Gift has been added to your cart!",
